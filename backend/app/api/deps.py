@@ -4,11 +4,23 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.core.config import settings
 from app.core.security import verify_clerk_token, TokenVerificationError
 from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models import User
+from app.infrastructure.db.repositories import DocumentRepository
+from app.infrastructure.storage.local import LocalFileStorageService
+from app.infrastructure.storage.s3 import S3FileStorageService
+from app.services.document import DocumentUploadService
 
 reusable_oauth2 = HTTPBearer(scheme_name="ClerkToken", auto_error=True)
+
+
+async def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentUploadService:
+    """FastAPI dependency that constructs and returns the DocumentUploadService."""
+    repository = DocumentRepository(db)
+    storage_service = S3FileStorageService() if settings.STORAGE_TYPE == "s3" else LocalFileStorageService()
+    return DocumentUploadService(repository, storage_service)
 
 
 async def get_current_user(

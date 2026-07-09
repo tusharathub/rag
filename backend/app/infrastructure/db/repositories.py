@@ -1,0 +1,189 @@
+from typing import List, Optional, Tuple, Dict
+from uuid import UUID
+from datetime import datetime
+from sqlalchemy import select, update, and_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from pgvector.sqlalchemy import Vector
+
+from app.domain.models.document import DocumentDomain, DocumentChunkDomain, DocumentStatus
+from app.interfaces.db.repositories import IDocumentRepository
+from app.infrastructure.db.models import Document, DocumentChunk, DocumentMetadata, Collection
+
+
+class DocumentRepository(IDocumentRepository):
+    """SQLAlchemy implementation of the IDocumentRepository."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    def _map_to_domain(self, db_doc: Document) -> DocumentDomain:
+        """Map SQLAlchemy model to Domain model."""
+        return DocumentDomain(
+            id=db_doc.id,
+            name=db_doc.name,
+            storage_path=db_doc.storage_path,
+            file_type=db_doc.file_type,
+            file_size=db_doc.file_size,
+            status=DocumentStatus(db_doc.status),
+            organization_id=db_doc.collection_id,  # Collection ID acts as the organization boundary
+            file_hash=db_doc.file_hash,
+            created_at=db_doc.created_at,
+            updated_at=db_doc.updated_at,
+        )
+
+    async def create(self, document: DocumentDomain) -> DocumentDomain:
+        """Saves a new document entity to the database."""
+        db_doc = Document(
+            id=document.id,
+            name=document.name,
+            storage_path=document.storage_path,
+            file_type=document.file_type,
+            file_size=document.file_size,
+            status=document.status.value,
+            file_hash=document.file_hash,
+            collection_id=document.organization_id,  # Maps to collection_id
+        )
+        self.db.add(db_doc)
+        await self.db.flush()
+        return self._map_to_domain(db_doc)
+
+    async def get_by_id(self, document_id: UUID) -> Optional[DocumentDomain]:
+        """Fetches a document by its ID if it has not been soft-deleted."""
+        stmt = select(Document).where(
+            and_(Document.id == document_id, Document.deleted_at.is_(None))
+        )
+        result = await self.db.execute(stmt)
+        db_doc = result.scalars().first()
+        return self._map_to_domain(db_doc) if db_doc else None
+
+    async def get_by_hash(self, file_hash: str, collection_id: UUID) -> Optional[DocumentDomain]:
+        """Fetches a document in a specific collection by its file hash if it is not deleted."""
+        stmt = select(Document).where(
+            and_(
+                Document.file_hash == file_hash,
+                Document.collection_id == collection_id,
+                Document.deleted_at.is_(None)
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_doc = result.scalars().first()
+        return self._map_to_domain(db_doc) if db_doc else None
+
+    async def get_by_org(self, organization_id: UUID, skip: int = 0, limit: int = 10) -> List[DocumentDomain]:
+        """Lists active documents belonging to a collection (mapped to organization_id)."""
+        stmt = (
+            select(Document)
+            .where(and_(Document.collection_id == organization_id, Document.deleted_at.is_(None)))
+            .offset(skip)
+            .limit(limit)
+            .order_by(Document.created_at.desc())
+        )
+        result = await self.db.execute(stmt)
+        db_docs = result.scalars().all()
+        return [self._map_to_domain(doc) for doc in db_docs]
+
+    async def update_status(self, document_id: UUID, status: DocumentStatus) -> DocumentDomain:
+        """Updates the status of a document (e.g. PENDING, PROCESSING, COMPLETED, FAILED)."""
+        stmt = (
+            update(Document)
+            .where(and_(Document.id == document_id, Document.deleted_at.is_(None)))
+            .values(status=status.value, updated_at=func.now())
+            .returning(Document)
+        )
+        result = await self.db.execute(stmt)
+        db_doc = result.scalars().first()
+        if not db_doc:
+            raise ValueError(f"Document with ID {document_id} not found or deleted.")
+        return self._map_to_domain(db_doc)
+
+    async def delete(self, document_id: UUID) -> bool:
+        """Performs a soft delete on the document."""
+        stmt = (
+            update(Document)
+            .where(and_(Document.id == document_id, Document.deleted_at.is_(None)))
+            .values(deleted_at=func.now())
+            .returning(Document.id)
+        )
+        result = await self.db.execute(stmt)
+        deleted_id = result.scalar_one_or_none()
+        return deleted_id is not None
+
+    async def bulk_save_chunks(self, chunks: List[DocumentChunkDomain]) -> None:
+        """Bulk inserts chunks of a document."""
+        if not chunks:
+            return
+        
+        db_chunks = [
+            DocumentChunk(
+                id=chunk.id,
+                document_id=chunk.document_id,
+                content=chunk.content,
+                chunk_index=chunk.chunk_index,
+                embedding=chunk.embedding
+            )
+            for chunk in chunks
+        ]
+        self.db.add_all(db_chunks)
+        await self.db.flush()
+
+    async def save_metadata_items(self, document_id: UUID, metadata: Dict[str, str]) -> None:
+        """Saves metadata key-value items for a document."""
+        if not metadata:
+            return
+            
+        db_items = [
+            DocumentMetadata(
+                document_id=document_id,
+                key=key,
+                value=str(value)
+            )
+            for key, value in metadata.items()
+        ]
+        self.db.add_all(db_items)
+        await self.db.flush()
+
+    async def get_metadata_items(self, document_id: UUID) -> Dict[str, str]:
+        """Retrieves metadata items for a document."""
+        stmt = select(DocumentMetadata).where(DocumentMetadata.document_id == document_id)
+        result = await self.db.execute(stmt)
+        items = result.scalars().all()
+        return {item.key: item.value for item in items}
+
+    async def hybrid_search(
+        self, 
+        organization_id: UUID, 
+        query_embedding: List[float], 
+        query_text: str, 
+        limit: int = 5
+    ) -> List[tuple[DocumentChunkDomain, float]]:
+        """Hybrid search implementation (dense similarity + sparse text search)."""
+        # Select chunks belonging to documents in the target collection (organization_id)
+        stmt = (
+            select(DocumentChunk, DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"))
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .where(
+                and_(
+                    Document.collection_id == organization_id,
+                    Document.deleted_at.is_(None)
+                )
+            )
+            .order_by("distance")
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        
+        results = []
+        for db_chunk, distance in rows:
+            # Distance: lower is more similar for cosine distance, convert to a similarity score (1 - distance)
+            score = 1.0 - float(distance) if distance is not None else 0.0
+            domain_chunk = DocumentChunkDomain(
+                id=db_chunk.id,
+                document_id=db_chunk.document_id,
+                content=db_chunk.content,
+                chunk_index=db_chunk.chunk_index,
+                embedding=db_chunk.embedding
+            )
+            results.append((domain_chunk, score))
+            
+        return results

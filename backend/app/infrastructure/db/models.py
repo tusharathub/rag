@@ -58,6 +58,7 @@ class Document(Base, TimeStampedModel, SoftDeleteMixin):
     file_type: Mapped[str] = mapped_column(String(50), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="PENDING")  # PENDING, PROCESSING, COMPLETED, FAILED
+    file_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
     collection_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("collections.id", ondelete="CASCADE"), index=True, nullable=False)
 
     # Relationships

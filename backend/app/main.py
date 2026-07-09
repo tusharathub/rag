@@ -38,6 +38,6 @@ async def health_check():
     }
 
 
-# Include API V1 Router (will be linked once routers are defined)
-# from app.api.v1.api import api_router
-# app.include_router(api_router, prefix=settings.API_V1_STR)
+# Include API V1 Router
+from app.api.v1.api import api_router
+app.include_router(api_router, prefix=settings.API_V1_STR)

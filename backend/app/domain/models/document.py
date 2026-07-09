@@ -19,6 +19,7 @@ class DocumentDomain(BaseModel):
     file_size: int
     status: DocumentStatus
     organization_id: UUID4
+    file_hash: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
