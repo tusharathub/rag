@@ -13,6 +13,11 @@ from app.utils.document import (
     FileValidationError
 )
 from app.core.config import settings
+from app.interfaces.processing import ITextPreprocessor, PreprocessingConfig
+from app.interfaces.ai.services import IEmbeddingService
+from app.infrastructure.parsers.factory import DocumentParserFactory
+from app.domain.models.document import DocumentChunkDomain
+
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +195,80 @@ class DocumentUploadService:
         
         # Soft delete from repository
         return await self.repository.delete(document_id)
+
+
+class DocumentProcessingService:
+    """Service that coordinates parsing, cleaning, chunking, embedding, and indexing of documents."""
+    
+    def __init__(
+        self,
+        repository: IDocumentRepository,
+        storage_service: IFileStorageService,
+        embedding_service: IEmbeddingService,
+        preprocessor: ITextPreprocessor
+    ):
+        self.repository = repository
+        self.storage_service = storage_service
+        self.embedding_service = embedding_service
+        self.preprocessor = preprocessor
+        self.parser_factory = DocumentParserFactory()
+
+    async def process_document(self, document_id: uuid.UUID, config: Optional[PreprocessingConfig] = None) -> None:
+        """Parses the document, processes it through the pipeline, generates embeddings, and saves chunks."""
+        # 1. Fetch document metadata
+        doc = await self.repository.get_by_id(document_id)
+        if not doc:
+            logger.error(f"Document {document_id} not found in repository.")
+            return
+
+        # 2. Update status to PROCESSING
+        await self.repository.update_status(document_id, DocumentStatus.PROCESSING)
+        logger.info(f"Started processing document {doc.name} (ID: {document_id})")
+
+        temp_path = None
+        try:
+            # 3. Download file from storage
+            file_bytes = await self.storage_service.download_file(doc.storage_path)
+            
+            # Write to a temporary file for the parser to read
+            import tempfile
+            _, ext = os.path.splitext(doc.name)
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp.write(file_bytes)
+                temp_path = tmp.name
+
+            # 4. Resolve parser and parse document
+            parser = self.parser_factory.get_parser(doc.file_type)
+            parsed_result = parser.parse(temp_path)
+
+            # 5. Run text preprocessing pipeline (clean + chunk)
+            chunks = await self.preprocessor.preprocess(parsed_result, document_id, config)
+            
+            if chunks:
+                # 6. Generate embeddings in batch for all chunks
+                chunk_contents = [c.content for c in chunks]
+                embeddings = await self.embedding_service.generate_embeddings_batch(chunk_contents)
+                
+                # Assign embeddings to chunks
+                for idx, chunk in enumerate(chunks):
+                    chunk.embedding = embeddings[idx]
+
+                # 7. Bulk save chunks to database
+                await self.repository.bulk_save_chunks(chunks)
+
+            # 8. Update status to COMPLETED
+            await self.repository.update_status(document_id, DocumentStatus.COMPLETED)
+            logger.info(f"Successfully processed document {doc.name} (Chunks: {len(chunks)})")
+
+        except Exception as e:
+            logger.error(f"Failed to process document {doc.name}: {e}", exc_info=True)
+            # Update status to FAILED
+            await self.repository.update_status(document_id, DocumentStatus.FAILED)
+            raise
+        finally:
+            # Clean up temp file
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception as cleanup_err:
+                    logger.warning(f"Failed to clean up temp file {temp_path}: {cleanup_err}")
