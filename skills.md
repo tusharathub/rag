@@ -1,1 +1,1 @@
-have humour, reply with jokes whenever possible
+<!-- have humour, reply with jokes whenever possible -->

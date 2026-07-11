@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pgvector.sqlalchemy import Vector
 
 from app.domain.models.document import DocumentDomain, DocumentChunkDomain, DocumentStatus
-from app.interfaces.db.repositories import IDocumentRepository
-from app.infrastructure.db.models import Document, DocumentChunk, DocumentMetadata, Collection
+from app.domain.models.chat import ChatSessionDomain, ChatMessageDomain
+from app.interfaces.db.repositories import IDocumentRepository, IChatRepository
+from app.infrastructure.db.models import Document, DocumentChunk, DocumentMetadata, Collection, ChatSession, Message, Chat
+import uuid
 
 
 class DocumentRepository(IDocumentRepository):
@@ -187,3 +189,149 @@ class DocumentRepository(IDocumentRepository):
             results.append((domain_chunk, score))
             
         return results
+
+
+class ChatRepository(IChatRepository):
+    """SQLAlchemy implementation of the IChatRepository."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_session(self, session: ChatSessionDomain) -> ChatSessionDomain:
+        # Find or create a default chat bot associated with the collection_id (mapped as organization_id)
+        stmt = select(Chat).where(Chat.collection_id == session.organization_id)
+        res = await self.db.execute(stmt)
+        chat = res.scalars().first()
+        if not chat:
+            chat = Chat(
+                id=uuid.uuid4(),
+                name="Default Assistant",
+                system_prompt="You are a helpful assistant. Use the retrieved context to answer the user's questions.",
+                user_id=session.user_id,
+                collection_id=session.organization_id
+            )
+            self.db.add(chat)
+            await self.db.flush()
+
+        db_session = ChatSession(
+            id=session.id,
+            chat_id=chat.id,
+            user_id=session.user_id,
+            title=session.title,
+        )
+        self.db.add(db_session)
+        await self.db.flush()
+        return session
+
+    async def get_session(self, session_id: UUID) -> Optional[ChatSessionDomain]:
+        stmt = select(ChatSession).where(and_(ChatSession.id == session_id, ChatSession.deleted_at.is_(None)))
+        res = await self.db.execute(stmt)
+        db_sess = res.scalars().first()
+        if not db_sess:
+            return None
+
+        messages = await self.get_messages(session_id)
+
+        # Map collection_id to organization_id
+        stmt_chat = select(Chat).where(Chat.id == db_sess.chat_id)
+        res_chat = await self.db.execute(stmt_chat)
+        chat = res_chat.scalars().first()
+        org_id = chat.collection_id if chat else db_sess.user_id
+
+        return ChatSessionDomain(
+            id=db_sess.id,
+            title=db_sess.title,
+            user_id=db_sess.user_id,
+            organization_id=org_id,
+            created_at=db_sess.created_at,
+            updated_at=db_sess.updated_at,
+            messages=messages
+        )
+
+    async def get_sessions_by_org(self, organization_id: UUID, skip: int = 0, limit: int = 10) -> List[ChatSessionDomain]:
+        stmt = (
+            select(ChatSession)
+            .join(Chat, Chat.id == ChatSession.chat_id)
+            .where(and_(Chat.collection_id == organization_id, ChatSession.deleted_at.is_(None)))
+            .offset(skip)
+            .limit(limit)
+            .order_by(ChatSession.created_at.desc())
+        )
+        res = await self.db.execute(stmt)
+        db_sessions = res.scalars().all()
+
+        sessions = []
+        for db_sess in db_sessions:
+            messages = await self.get_messages(db_sess.id)
+            sessions.append(
+                ChatSessionDomain(
+                    id=db_sess.id,
+                    title=db_sess.title,
+                    user_id=db_sess.user_id,
+                    organization_id=organization_id,
+                    created_at=db_sess.created_at,
+                    updated_at=db_sess.updated_at,
+                    messages=messages
+                )
+            )
+        return sessions
+
+    async def save_message(self, message: ChatMessageDomain) -> ChatMessageDomain:
+        sources_dict = [
+            {
+                "id": str(src.id),
+                "chat_message_id": str(src.chat_message_id),
+                "document_chunk_id": str(src.document_chunk_id),
+                "relevance_score": src.relevance_score,
+                "document_name": src.document_name
+            }
+            for src in message.sources
+        ]
+        db_msg = Message(
+            id=message.id,
+            chat_session_id=message.chat_session_id,
+            role=message.role.value,
+            content=message.content,
+            metadata_json={"sources": sources_dict}
+        )
+        self.db.add(db_msg)
+        await self.db.flush()
+        return message
+
+    async def get_messages(self, session_id: UUID) -> List[ChatMessageDomain]:
+        from app.domain.models.chat import MessageRole, ChatMessageSourceDomain
+        stmt = (
+            select(Message)
+            .where(Message.chat_session_id == session_id)
+            .order_by(Message.created_at.asc())
+        )
+        res = await self.db.execute(stmt)
+        db_messages = res.scalars().all()
+
+        messages = []
+        for db_msg in db_messages:
+            sources = []
+            metadata_val = db_msg.metadata_json or {}
+            sources_list = metadata_val.get("sources", [])
+            for src in sources_list:
+                sources.append(
+                    ChatMessageSourceDomain(
+                        id=UUID(src["id"]),
+                        chat_message_id=UUID(src["chat_message_id"]),
+                        document_chunk_id=UUID(src["document_chunk_id"]),
+                        relevance_score=src["relevance_score"],
+                        document_name=src.get("document_name")
+                    )
+                )
+            messages.append(
+                ChatMessageDomain(
+                    id=db_msg.id,
+                    chat_session_id=db_msg.chat_session_id,
+                    role=MessageRole(db_msg.role),
+                    content=db_msg.content,
+                    created_at=db_msg.created_at,
+                    sources=sources
+                )
+            )
+        return messages
+

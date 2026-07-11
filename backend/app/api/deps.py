@@ -12,8 +12,15 @@ from app.infrastructure.db.repositories import DocumentRepository
 from app.infrastructure.storage.local import LocalFileStorageService
 from app.infrastructure.storage.s3 import S3FileStorageService
 from app.services.document import DocumentUploadService
+from app.interfaces.ai.services import IEmbeddingService
+from app.infrastructure.ai.embeddings import OpenAIEmbeddingService
 
 reusable_oauth2 = HTTPBearer(scheme_name="ClerkToken", auto_error=True)
+
+
+async def get_embedding_service() -> IEmbeddingService:
+    """FastAPI dependency that constructs and returns the concrete IEmbeddingService."""
+    return OpenAIEmbeddingService()
 
 
 async def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentUploadService:
