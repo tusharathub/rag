@@ -100,6 +100,8 @@ class DocumentChunk(Base, TimeStampedModel):
     document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    collection_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=Tru)), ForeignKey("collections.id", ondelete="CASCADE"), index=True, nullable=False)
     
     # Vector embedding
     embedding = mapped_column(Vector(settings.EMBEDDING_DIMENSION), nullable=False)

@@ -249,9 +249,11 @@ class DocumentProcessingService:
                 chunk_contents = [c.content for c in chunks]
                 embeddings = await self.embedding_service.generate_embeddings_batch(chunk_contents)
                 
-                # Assign embeddings to chunks
+                # Assign embeddings, collection_id and page_number to chunks
                 for idx, chunk in enumerate(chunks):
                     chunk.embedding = embeddings[idx]
+                    chunk.collection_id = doc.organization_id
+                    chunk.page_number = chunk.metadata.get("page_start")
 
                 # 7. Bulk save chunks to database
                 await self.repository.bulk_save_chunks(chunks)

@@ -27,7 +27,11 @@ class DocumentDomain(BaseModel):
 class DocumentChunkDomain(BaseModel):
     id: UUID4
     document_id: UUID4
+    collection_id: Optional[UUID4] = None
     content: str
     chunk_index: int
+    page_number: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     embedding: Optional[List[float]] = None
+
+

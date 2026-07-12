@@ -119,9 +119,12 @@ class DocumentRepository(IDocumentRepository):
             DocumentChunk(
                 id=chunk.id,
                 document_id=chunk.document_id,
+                collection_id=chunk.collection_id,
                 content=chunk.content,
                 chunk_index=chunk.chunk_index,
-                embedding=chunk.embedding
+                page_number=chunk.page_number,
+                embedding=chunk.embedding,
+                metadata=chunk.metadata
             )
             for chunk in chunks
         ]
@@ -165,7 +168,7 @@ class DocumentRepository(IDocumentRepository):
             .join(Document, Document.id == DocumentChunk.document_id)
             .where(
                 and_(
-                    Document.collection_id == organization_id,
+                    DocumentChunk.collection_id == organization_id,
                     Document.deleted_at.is_(None)
                 )
             )
@@ -182,8 +185,11 @@ class DocumentRepository(IDocumentRepository):
             domain_chunk = DocumentChunkDomain(
                 id=db_chunk.id,
                 document_id=db_chunk.document_id,
+                collection_id=db_chunk.collection_id,
                 content=db_chunk.content,
                 chunk_index=db_chunk.chunk_index,
+                page_number=db_chunk.page_number,
+                metadata=db_chunk.metadata,
                 embedding=db_chunk.embedding
             )
             results.append((domain_chunk, score))
