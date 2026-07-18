@@ -98,16 +98,25 @@ class DocumentChunk(Base, TimeStampedModel):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False)
+    collection_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("collections.id", ondelete="CASCADE"), index=True, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    collection_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=Tru)), ForeignKey("collections.id", ondelete="CASCADE"), index=True, nullable=False)
+    page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Vector embedding
     embedding = mapped_column(Vector(settings.EMBEDDING_DIMENSION), nullable=False)
 
+    # JSONB metadata for extra fields (renamed to chunk_metadata to avoid conflict with SQLAlchemy metadata property)
+    chunk_metadata: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+
     # Relationships
     document: Mapped["Document"] = relationship(back_populates="chunks")
+
+    __table_args__ = (
+        Index("idx_chunks_metadata_gin", "chunk_metadata", postgresql_using="gin"),
+    )
+
+
 
 
 class Chat(Base, TimeStampedModel, SoftDeleteMixin):

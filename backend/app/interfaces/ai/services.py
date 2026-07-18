@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, List, Optional
+from uuid import UUID
 from app.domain.models.chat import MessageRole
+from app.domain.models.document import DocumentChunkDomain
+
 
 
 class IEmbeddingService(ABC):
@@ -47,3 +50,19 @@ class IRerankingService(ABC):
     ) -> List[dict]:
         """Reranks retrieved documents matching semantic score to query."""
         pass
+
+
+class IRetrievalService(ABC):
+    @abstractmethod
+    async def retrieve_context(
+        self, 
+        query: str, 
+        collection_id: UUID, 
+        user_id: UUID, 
+        limit: int = 5,
+        use_mmr: bool = False,
+        lambda_val: float = 0.5
+    ) -> List[tuple[DocumentChunkDomain, float]]:
+        """Retrieves verified, deduplicated, and ranked context chunks for RAG."""
+        pass
+

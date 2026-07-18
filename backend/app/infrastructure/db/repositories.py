@@ -124,7 +124,7 @@ class DocumentRepository(IDocumentRepository):
                 chunk_index=chunk.chunk_index,
                 page_number=chunk.page_number,
                 embedding=chunk.embedding,
-                metadata=chunk.metadata
+                chunk_metadata=chunk.metadata
             )
             for chunk in chunks
         ]
@@ -189,7 +189,7 @@ class DocumentRepository(IDocumentRepository):
                 content=db_chunk.content,
                 chunk_index=db_chunk.chunk_index,
                 page_number=db_chunk.page_number,
-                metadata=db_chunk.metadata,
+                metadata=db_chunk.chunk_metadata,
                 embedding=db_chunk.embedding
             )
             results.append((domain_chunk, score))
