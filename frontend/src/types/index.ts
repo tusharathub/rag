@@ -54,6 +54,10 @@ export interface ChatMessageSource {
   documentChunkId: string;
   relevanceScore: number;
   documentName?: string;
+  content?: string;
+  pageStart?: number;
+  pageEnd?: number;
+  sectionPath?: string;
 }
 
 export interface ChatMessage {

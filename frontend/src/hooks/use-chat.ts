@@ -12,7 +12,11 @@ const mockAnswers = [
         chatMessageId: "",
         documentChunkId: "chunk-101",
         relevanceScore: 0.96,
-        documentName: "Q2_Financial_Report.pdf"
+        documentName: "Q2_Financial_Report.pdf",
+        content: "Cloud Enterprise Subscriptions grew by 24% year-over-year (YoY) in the second quarter, representing $12.4M of the total recurring revenue. This is primarily attributed to strong integration of advanced AI and semantic search capabilities inside of client clusters.",
+        pageStart: 4,
+        pageEnd: 4,
+        sectionPath: "Financial Overview > Revenue Breakdown",
       }
     ]
   },
@@ -25,7 +29,11 @@ const mockAnswers = [
         chatMessageId: "",
         documentChunkId: "chunk-102",
         relevanceScore: 0.98,
-        documentName: "AI_RAG_Architecture_DeepDive.pdf"
+        documentName: "AI_RAG_Architecture_DeepDive.pdf",
+        content: "The RAG (Retrieval-Augmented Generation) pipeline utilizes a hybrid search strategy that blends semantic vector similarities computed by Ada-002 embeddings with standard lexical BM25 database indexing. Re-ranking is subsequently computed using Cohere's rerank engine.",
+        pageStart: 8,
+        pageEnd: 9,
+        sectionPath: "Technical Specifications > Search Ingestion",
       }
     ]
   },
@@ -38,7 +46,11 @@ const mockAnswers = [
         chatMessageId: "",
         documentChunkId: "chunk-103",
         relevanceScore: 0.89,
-        documentName: "API_Contract_v3.docx"
+        documentName: "API_Contract_v3.docx",
+        content: "All metadata indexing endpoints have migrated from version 2 REST specifications to GraphQL schemas in API v3. For file streaming and raw document buffer uploads, multi-part REST endpoints are maintained for backward compatibility.",
+        pageStart: 2,
+        pageEnd: 3,
+        sectionPath: "API v3 Reference > Endpoint Specification",
       }
     ]
   }
