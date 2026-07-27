@@ -13,17 +13,21 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { setActivePanel, toggleSidebar, setUploadModalOpen } from "@/store/slices/uiSlice";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function MainSidebar() {
-  const activePanel = useAppStore((state) => state.activePanel);
-  const setActivePanel = useAppStore((state) => state.setActivePanel);
-  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = useAppStore((state) => state.toggleSidebar);
-  const setUploadModalOpen = useAppStore((state) => state.setUploadModalOpen);
+  const dispatch = useAppDispatch();
+  const activePanel = useAppSelector((state) => state.ui.activePanel);
+  const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
+
+  const handleSetActivePanel = (panel: typeof activePanel) => dispatch(setActivePanel(panel));
+  const handleToggleSidebar = () => dispatch(toggleSidebar());
+  const handleSetUploadModalOpen = (open: boolean) => dispatch(setUploadModalOpen(open));
+
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -55,7 +59,7 @@ export function MainSidebar() {
 
           {!sidebarCollapsed && (
             <button
-              onClick={toggleSidebar}
+              onClick={handleToggleSidebar}
               className="text-slate-400 hover:text-white hover:bg-slate-800 p-1.5 rounded-lg transition-colors hidden md:block"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -66,7 +70,7 @@ export function MainSidebar() {
         {/* Action Button: Upload */}
         <div className="p-3">
           <Button
-            onClick={() => setUploadModalOpen(true)}
+            onClick={() => handleSetUploadModalOpen(true)}
             variant="glass"
             className={cn(
               "w-full flex items-center justify-center gap-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20",
@@ -86,7 +90,7 @@ export function MainSidebar() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActivePanel(item.id)}
+                onClick={() => handleSetActivePanel(item.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all group duration-150",
                   isActive
@@ -112,7 +116,7 @@ export function MainSidebar() {
         {/* Toggle Collapse on small width */}
         {sidebarCollapsed && (
           <button
-            onClick={toggleSidebar}
+            onClick={handleToggleSidebar}
             className="mx-auto text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 hidden md:block"
           >
             <ChevronRight className="h-4 w-4" />

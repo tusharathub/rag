@@ -4,12 +4,13 @@ import * as React from "react";
 import { Send, Paperclip, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChat } from "@/hooks/use-chat";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppDispatch } from "@/store";
+import { setUploadModalOpen } from "@/store/slices/uiSlice";
 
 export function ChatInput() {
   const [text, setText] = React.useState("");
   const { sendMessage, isStreaming } = useChat();
-  const setUploadModalOpen = useAppStore((state) => state.setUploadModalOpen);
+  const dispatch = useAppDispatch();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +32,7 @@ export function ChatInput() {
         {/* Attach File trigger */}
         <button
           type="button"
-          onClick={() => setUploadModalOpen(true)}
+          onClick={() => dispatch(setUploadModalOpen(true))}
           className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-xl transition-colors"
           title="Upload Document"
         >

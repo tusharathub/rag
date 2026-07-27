@@ -4,6 +4,9 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastContainer } from "@/components/ui/toast";
 
+import { Provider } from "react-redux";
+import { store } from "@/store";
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(() => new QueryClient());
   const [theme, setTheme] = React.useState<"light" | "dark">("dark"); // Default dark mode
@@ -37,9 +40,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <ToastContainer />
-    </QueryClientProvider>
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <ToastContainer />
+      </QueryClientProvider>
+    </Provider>
   );
 }
+

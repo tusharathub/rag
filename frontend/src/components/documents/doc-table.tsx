@@ -2,13 +2,20 @@
 
 import * as React from "react";
 import { Search, FileText, Trash2, ArrowUpDown, RefreshCw, AlertCircle, CheckCircle, Clock } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { deleteDocument } from "@/store/slices/documentSlice";
+import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export function DocTable() {
-  const documents = useAppStore((state) => state.documents);
-  const deleteDocument = useAppStore((state) => state.deleteDocument);
+  const dispatch = useAppDispatch();
+  const documents = useAppSelector((state) => state.documents.items);
+  
+  const handleDeleteDocument = (id: string) => {
+    dispatch(deleteDocument(id));
+    dispatch(removeDocumentFromCollections(id));
+  };
   
   const [search, setSearch] = React.useState("");
   const [sortField, setSortField] = React.useState<"name" | "fileSize" | "createdAt">("createdAt");
@@ -175,7 +182,7 @@ export function DocTable() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteDocument(doc.id)}
+                        onClick={() => handleDeleteDocument(doc.id)}
                         className="text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg h-9 w-9"
                         title="Delete file"
                       >

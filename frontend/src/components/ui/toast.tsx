@@ -1,10 +1,11 @@
 import * as React from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { removeToast } from "@/store/slices/uiSlice";
 
 export function ToastContainer() {
-  const toasts = useAppStore((state) => state.toasts);
-  const removeToast = useAppStore((state) => state.removeToast);
+  const dispatch = useAppDispatch();
+  const toasts = useAppSelector((state) => state.ui.toasts);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
@@ -24,7 +25,7 @@ export function ToastContainer() {
             <p className="text-sm font-medium text-foreground flex-grow pr-2">{toast.message}</p>
 
             <button
-              onClick={() => removeToast(toast.id)}
+              onClick={() => dispatch(removeToast(toast.id))}
               className="text-muted-foreground hover:text-foreground hover:bg-muted p-1 rounded-lg"
             >
               <X className="h-4 w-4" />

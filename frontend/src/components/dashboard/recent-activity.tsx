@@ -4,11 +4,11 @@ import * as React from "react";
 import { FileUp, MessageSquare, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector } from "@/store";
 
 export function RecentActivity() {
-  const documents = useAppStore((state) => state.documents);
-  const chatSessions = useAppStore((state) => state.chatSessions);
+  const documents = useAppSelector((state) => state.documents.items);
+  const chatSessions = useAppSelector((state) => state.chat.sessions);
 
   // Derive activities from documents and chat sessions
   const activities = React.useMemo(() => {

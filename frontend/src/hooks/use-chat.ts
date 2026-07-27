@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { addChatMessage, addChatSession, updateChatMessageText } from "@/store/slices/chatSlice";
 import { ChatMessage, ChatMessageSource } from "@/types";
 
 const mockAnswers = [
@@ -63,16 +64,16 @@ const fallbackAnswer = {
 
 export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
-  const addChatMessage = useAppStore((state) => state.addChatMessage);
-  const activeChatSessionId = useAppStore((state) => state.activeChatSessionId);
-  const addChatSession = useAppStore((state) => state.addChatSession);
+  const dispatch = useAppDispatch();
+  const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
     let sessionId = activeChatSessionId;
     if (!sessionId) {
-      sessionId = addChatSession();
+      sessionId = `chat-${Date.now()}`;
+      dispatch(addChatSession({ id: sessionId }));
     }
 
     // 1. Add User Message
@@ -83,7 +84,7 @@ export function useChat() {
       content,
       createdAt: new Date().toISOString()
     };
-    addChatMessage(sessionId, userMessage);
+    dispatch(addChatMessage({ sessionId, message: userMessage }));
 
     // 2. Set streaming state
     setIsStreaming(true);
@@ -107,7 +108,7 @@ export function useChat() {
     };
 
     // Add empty message to start streaming
-    addChatMessage(sessionId, initialAiMessage);
+    dispatch(addChatMessage({ sessionId, message: initialAiMessage }));
 
     // Simulate word-by-word streaming
     const words = finalAnswer.response.split(" ");
@@ -118,18 +119,7 @@ export function useChat() {
       if (wordIndex < words.length) {
         currentText += (wordIndex === 0 ? "" : " ") + words[wordIndex];
         
-        // Directly update the store's message content
-        useAppStore.setState((state) => {
-          const sessionMsgs = state.chatMessages[sessionId] || [];
-          return {
-            chatMessages: {
-              ...state.chatMessages,
-              [sessionId]: sessionMsgs.map((m) =>
-                m.id === aiMessageId ? { ...m, content: currentText } : m
-              )
-            }
-          };
-        });
+        dispatch(updateChatMessageText({ sessionId, messageId: aiMessageId, content: currentText }));
         
         wordIndex++;
       } else {
@@ -144,3 +134,4 @@ export function useChat() {
     isStreaming
   };
 }
+

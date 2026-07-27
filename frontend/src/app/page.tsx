@@ -9,16 +9,16 @@ import { ChatContainer } from "@/components/chat/chat-container";
 import { DocTable } from "@/components/documents/doc-table";
 import { CollectionGrid } from "@/components/collections/collection-grid";
 import { UploadModal } from "@/components/documents/upload-modal";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector } from "@/store";
 import { Bell, Sparkles, FolderLock, MessageSquare, Layers, LayoutDashboard, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 export default function WorkspacePage() {
-  const activePanel = useAppStore((state) => state.activePanel);
-  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = useAppStore((state) => state.toggleSidebar);
+  const activePanel = useAppSelector((state) => state.ui.activePanel);
+  const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
 
   const getHeaderTitle = () => {
     switch (activePanel) {

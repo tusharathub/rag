@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { User, Bot, FileText, ExternalLink } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector } from "@/store";
 import { cn } from "@/utils/cn";
 import { SourceCitations } from "./source-citations";
 
 export function ChatMessages({ sessionId }: { sessionId: string }) {
-  const messages = useAppStore((state) => state.chatMessages[sessionId] || []);
+  const messages = useAppSelector((state) => state.chat.messages[sessionId] || []);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages come in or update

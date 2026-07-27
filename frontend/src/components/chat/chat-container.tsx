@@ -2,18 +2,17 @@
 
 import * as React from "react";
 import { Plus, MessageSquare, Trash2, Bot, HelpCircle, Sparkles } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { setActiveChatSessionId, addChatSession, deleteChatSession } from "@/store/slices/chatSlice";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 export function ChatContainer() {
-  const chatSessions = useAppStore((state) => state.chatSessions);
-  const activeChatSessionId = useAppStore((state) => state.activeChatSessionId);
-  const setActiveChatSessionId = useAppStore((state) => state.setActiveChatSessionId);
-  const addChatSession = useAppStore((state) => state.addChatSession);
-  const deleteChatSession = useAppStore((state) => state.deleteChatSession);
+  const dispatch = useAppDispatch();
+  const chatSessions = useAppSelector((state) => state.chat.sessions);
+  const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
 
   const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
 
@@ -24,7 +23,7 @@ export function ChatContainer() {
         <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conversations</span>
           <Button
-            onClick={() => addChatSession("New Conversation")}
+            onClick={() => dispatch(addChatSession({ id: `chat-${Date.now()}` }))}
             variant="outline"
             size="sm"
             className="h-8 w-8 p-0 rounded-lg"
@@ -49,7 +48,7 @@ export function ChatContainer() {
                       ? "bg-primary/10 text-primary font-semibold"
                       : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-foreground"
                   )}
-                  onClick={() => setActiveChatSessionId(session.id)}
+                  onClick={() => dispatch(setActiveChatSessionId(session.id))}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <MessageSquare className="h-4.5 w-4.5 flex-shrink-0 opacity-70" />
@@ -59,7 +58,7 @@ export function ChatContainer() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteChatSession(session.id);
+                      dispatch(deleteChatSession(session.id));
                     }}
                     className="opacity-0 group-hover:opacity-100 hover:text-rose-500 p-1 rounded transition-opacity"
                     title="Delete Conversation"
@@ -109,7 +108,7 @@ export function ChatContainer() {
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed mb-6">
               Create a conversation session or select an existing one to ask questions and search documents instantly.
             </p>
-            <Button onClick={() => addChatSession("New Conversation")} className="rounded-xl flex items-center gap-2">
+            <Button onClick={() => dispatch(addChatSession({ id: `chat-${Date.now()}` }))} className="rounded-xl flex items-center gap-2">
               <Plus className="h-4 w-4" />
               <span>Start Conversation</span>
             </Button>

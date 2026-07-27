@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { Upload, X, FileText, CheckCircle, AlertCircle } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { setUploadModalOpen } from "@/store/slices/uiSlice";
+import { addDocument } from "@/store/slices/documentSlice";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -17,9 +19,10 @@ interface UploadingFile {
 }
 
 export function UploadModal() {
-  const uploadModalOpen = useAppStore((state) => state.uploadModalOpen);
-  const setUploadModalOpen = useAppStore((state) => state.setUploadModalOpen);
-  const addDocument = useAppStore((state) => state.addDocument);
+  const dispatch = useAppDispatch();
+  const uploadModalOpen = useAppSelector((state) => state.ui.uploadModalOpen);
+  const handleSetUploadModalOpen = (open: boolean) => dispatch(setUploadModalOpen(open));
+  const handleAddDocument = (doc: Document) => dispatch(addDocument(doc));
 
   const [dragActive, setDragActive] = React.useState(false);
   const [uploadQueue, setUploadQueue] = React.useState<UploadingFile[]>([]);
@@ -67,7 +70,7 @@ export function UploadModal() {
             updatedAt: new Date().toISOString(),
           };
 
-          addDocument(newDoc);
+          handleAddDocument(newDoc);
 
           setUploadQueue((prev) =>
             prev.map((f) =>
@@ -105,8 +108,8 @@ export function UploadModal() {
   };
 
   return (
-    <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
-      <DialogContent onClose={() => setUploadModalOpen(false)}>
+    <Dialog open={uploadModalOpen} onOpenChange={handleSetUploadModalOpen}>
+      <DialogContent onClose={() => handleSetUploadModalOpen(false)}>
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Upload Knowledge Files</DialogTitle>
           <DialogDescription>

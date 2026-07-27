@@ -4,12 +4,12 @@ import * as React from "react";
 import { Upload, MessageSquare, Layers, Sparkles } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppDispatch } from "@/store";
+import { setUploadModalOpen, setActivePanel } from "@/store/slices/uiSlice";
+import { addChatSession } from "@/store/slices/chatSlice";
 
 export function QuickActions() {
-  const setUploadModalOpen = useAppStore((state) => state.setUploadModalOpen);
-  const addChatSession = useAppStore((state) => state.addChatSession);
-  const setActivePanel = useAppStore((state) => state.setActivePanel);
+  const dispatch = useAppDispatch();
 
   const actions = [
     {
@@ -19,7 +19,7 @@ export function QuickActions() {
       icon: Upload,
       color: "text-blue-500 bg-blue-500/10 border-blue-500/20",
       btnVariant: "default" as const,
-      onClick: () => setUploadModalOpen(true),
+      onClick: () => dispatch(setUploadModalOpen(true)),
     },
     {
       title: "New AI Chat",
@@ -29,8 +29,9 @@ export function QuickActions() {
       color: "text-purple-500 bg-purple-500/10 border-purple-500/20",
       btnVariant: "default" as const,
       onClick: () => {
-        addChatSession("New Conversation");
-        setActivePanel("chat");
+        const id = `chat-${Date.now()}`;
+        dispatch(addChatSession({ id, title: "New Conversation" }));
+        dispatch(setActivePanel("chat"));
       },
     },
     {
@@ -40,7 +41,7 @@ export function QuickActions() {
       icon: Layers,
       color: "text-amber-500 bg-amber-500/10 border-amber-500/20",
       btnVariant: "outline" as const,
-      onClick: () => setActivePanel("collections"),
+      onClick: () => dispatch(setActivePanel("collections")),
     },
   ];
 

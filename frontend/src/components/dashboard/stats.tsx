@@ -3,12 +3,12 @@
 import * as React from "react";
 import { FileText, Database, HelpCircle, HardDrive } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector } from "@/store";
 
 export function Stats() {
-  const documents = useAppStore((state) => state.documents);
-  const chatSessions = useAppStore((state) => state.chatSessions);
-  const chatMessages = useAppStore((state) => state.chatMessages);
+  const documents = useAppSelector((state) => state.documents.items);
+  const chatSessions = useAppSelector((state) => state.chat.sessions);
+  const chatMessages = useAppSelector((state) => state.chat.messages);
 
   // Compute stats
   const totalDocs = documents.length;

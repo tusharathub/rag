@@ -2,17 +2,17 @@
 
 import * as React from "react";
 import { FolderPlus, Trash2, Layers, MessageSquare, Plus, Check } from "lucide-react";
-import { useAppStore } from "@/store/use-app-store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { addCollection, deleteCollection } from "@/store/slices/collectionSlice";
+import { addChatSession } from "@/store/slices/chatSlice";
+import { setActivePanel } from "@/store/slices/uiSlice";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export function CollectionGrid() {
-  const collections = useAppStore((state) => state.collections);
-  const documents = useAppStore((state) => state.documents);
-  const addCollection = useAppStore((state) => state.addCollection);
-  const deleteCollection = useAppStore((state) => state.deleteCollection);
-  const addChatSession = useAppStore((state) => state.addChatSession);
-  const setActivePanel = useAppStore((state) => state.setActivePanel);
+  const dispatch = useAppDispatch();
+  const collections = useAppSelector((state) => state.collections.items);
+  const documents = useAppSelector((state) => state.documents.items);
 
   const [name, setName] = React.useState("");
   const [selectedDocs, setSelectedDocs] = React.useState<string[]>([]);
@@ -21,7 +21,7 @@ export function CollectionGrid() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addCollection(name, selectedDocs);
+    dispatch(addCollection(name, selectedDocs));
     setName("");
     setSelectedDocs([]);
     setIsCreating(false);
@@ -34,8 +34,9 @@ export function CollectionGrid() {
   };
 
   const handleChatWithCollection = (colName: string) => {
-    const sessionId = addChatSession(`Chat: ${colName}`);
-    setActivePanel("chat");
+    const sessionId = `chat-${Date.now()}`;
+    dispatch(addChatSession({ id: sessionId, title: `Chat: ${colName}` }));
+    dispatch(setActivePanel("chat"));
   };
 
   return (
@@ -150,7 +151,7 @@ export function CollectionGrid() {
                 <span>Chat</span>
               </Button>
               <Button
-                onClick={() => deleteCollection(col.id)}
+                onClick={() => dispatch(deleteCollection(col.id))}
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-xl h-9 w-9"
