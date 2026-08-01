@@ -37,6 +37,9 @@ export function UploadModal() {
     }
   };
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
+
   const processFiles = (files: FileList) => {
     const newItems: UploadingFile[] = Array.from(files).map((file) => ({
       name: file.name,
@@ -48,43 +51,79 @@ export function UploadModal() {
 
     setUploadQueue((prev) => [...newItems, ...prev]);
 
-    newItems.forEach((item) => {
-      // Simulate file upload progress
-      let currentProgress = 0;
-      const interval = setInterval(() => {
-        currentProgress += Math.floor(Math.random() * 25) + 5;
-        if (currentProgress >= 100) {
-          currentProgress = 100;
-          clearInterval(interval);
-          
-          // Complete upload, add doc to global store
-          const newDoc: Document = {
-            id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-            name: item.name,
-            storagePath: `/docs/${item.name}`,
-            fileType: item.name.split(".").pop() || "txt",
-            fileSize: item.size,
-            status: "COMPLETED",
-            organizationId: "org-1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+    Array.from(files).forEach((file, index) => {
+      const queueItem = newItems[index];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("collection_id", DEFAULT_COLLECTION_ID);
 
-          handleAddDocument(newDoc);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/documents/upload`, true);
 
+      // Track progress
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
           setUploadQueue((prev) =>
             prev.map((f) =>
-              f.id === item.id ? { ...f, progress: 100, status: "success" } : f
-            )
-          );
-        } else {
-          setUploadQueue((prev) =>
-            prev.map((f) =>
-              f.id === item.id ? { ...f, progress: currentProgress } : f
+              f.id === queueItem.id ? { ...f, progress: percentComplete } : f
             )
           );
         }
-      }, 300);
+      };
+
+      // Handle response
+      xhr.onload = () => {
+        if (xhr.status === 200 || xhr.status === 201) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const newDoc: Document = {
+              id: data.id,
+              name: data.name,
+              storagePath: data.storage_path,
+              fileType: data.file_type,
+              fileSize: data.file_size,
+              status: data.status || "COMPLETED",
+              organizationId: data.collection_id || DEFAULT_COLLECTION_ID,
+              createdAt: data.created_at || new Date().toISOString(),
+              updatedAt: data.updated_at || new Date().toISOString(),
+            };
+
+            handleAddDocument(newDoc);
+
+            setUploadQueue((prev) =>
+              prev.map((f) =>
+                f.id === queueItem.id ? { ...f, progress: 100, status: "success" } : f
+              )
+            );
+          } catch (err) {
+            console.error("Failed to parse upload response", err);
+            setUploadQueue((prev) =>
+              prev.map((f) =>
+                f.id === queueItem.id ? { ...f, status: "error" } : f
+              )
+            );
+          }
+        } else {
+          console.error("Upload failed with status", xhr.status);
+          setUploadQueue((prev) =>
+            prev.map((f) =>
+              f.id === queueItem.id ? { ...f, status: "error" } : f
+            )
+          );
+        }
+      };
+
+      xhr.onerror = () => {
+        console.error("Upload network error");
+        setUploadQueue((prev) =>
+          prev.map((f) =>
+            f.id === queueItem.id ? { ...f, status: "error" } : f
+          )
+        );
+      };
+
+      xhr.send(formData);
     });
   };
 

@@ -9,10 +9,10 @@ from fastapi import (
     UploadFile, 
     status
 )
-from pydantic import UUID4
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-
+from app.core.config import settings
 from app.api.deps import get_current_user, get_db, get_document_service
 from app.infrastructure.db.models import User, Collection
 from app.schemas.document import (
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+
 async def verify_collection_ownership(
     collection_id: UUID, 
     user_id: UUID, 
@@ -44,6 +45,17 @@ async def verify_collection_ownership(
     result = await db.execute(stmt)
     collection = result.scalars().first()
     if not collection:
+        if settings.ENVIRONMENT == "development":
+            # Auto-create collection for dev ease
+            collection = Collection(
+                id=collection_id,
+                name="Default Dev Collection",
+                user_id=user_id
+            )
+            db.add(collection)
+            await db.commit()
+            await db.refresh(collection)
+            return collection
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Collection not found or access denied."
@@ -59,7 +71,7 @@ async def verify_collection_ownership(
     description="Uploads a supported file, validates size/MIME/magic-bytes, checks duplicates, extracts metadata, and stores it."
 )
 async def upload_document(
-    collection_id: UUID4 = Form(...),
+    collection_id: UUID = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -105,7 +117,7 @@ async def upload_document(
     description="Retrieves structural details and key-value metadata for a specific document."
 )
 async def get_document(
-    document_id: UUID4,
+    document_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     doc_service: DocumentUploadService = Depends(get_document_service),
@@ -137,7 +149,7 @@ async def get_document(
     description="Lists active documents within the specified collection."
 )
 async def list_documents(
-    collection_id: UUID4,
+    collection_id: UUID,
     skip: int = 0,
     limit: int = 20,
     current_user: User = Depends(get_current_user),
@@ -285,7 +297,7 @@ async def list_documents(
     description="Soft-deletes the document from the database and removes its physical file from storage."
 )
 async def delete_document(
-    document_id: UUID4,
+    document_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     doc_service: DocumentUploadService = Depends(get_document_service),

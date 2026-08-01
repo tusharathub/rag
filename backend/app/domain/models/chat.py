@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field, UUID4
+from uuid import UUID
+from pydantic import BaseModel, Field
 
 
 class MessageRole(str, Enum):
@@ -11,16 +12,16 @@ class MessageRole(str, Enum):
 
 
 class ChatMessageSourceDomain(BaseModel):
-    id: UUID4
-    chat_message_id: UUID4
-    document_chunk_id: UUID4
+    id: UUID
+    chat_message_id: UUID
+    document_chunk_id: UUID
     relevance_score: float
     document_name: Optional[str] = None  # Helper for context visualization
 
 
 class ChatMessageDomain(BaseModel):
-    id: UUID4
-    chat_session_id: UUID4
+    id: UUID
+    chat_session_id: UUID
     role: MessageRole
     content: str
     created_at: datetime
@@ -28,10 +29,10 @@ class ChatMessageDomain(BaseModel):
 
 
 class ChatSessionDomain(BaseModel):
-    id: UUID4
+    id: UUID
     title: str
-    user_id: UUID4
-    organization_id: UUID4
+    user_id: UUID
+    organization_id: UUID
     created_at: datetime
     updated_at: datetime
     messages: List[ChatMessageDomain] = Field(default_factory=list)

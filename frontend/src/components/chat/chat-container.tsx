@@ -23,7 +23,7 @@ export function ChatContainer() {
         <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conversations</span>
           <Button
-            onClick={() => dispatch(addChatSession({ id: `chat-${Date.now()}` }))}
+            onClick={() => dispatch(addChatSession({ id: crypto.randomUUID() }))}
             variant="outline"
             size="sm"
             className="h-8 w-8 p-0 rounded-lg"
@@ -108,7 +108,7 @@ export function ChatContainer() {
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed mb-6">
               Create a conversation session or select an existing one to ask questions and search documents instantly.
             </p>
-            <Button onClick={() => dispatch(addChatSession({ id: `chat-${Date.now()}` }))} className="rounded-xl flex items-center gap-2">
+            <Button onClick={() => dispatch(addChatSession({ id: crypto.randomUUID() }))} className="rounded-xl flex items-center gap-2">
               <Plus className="h-4 w-4" />
               <span>Start Conversation</span>
             </Button>

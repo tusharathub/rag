@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Search, FileText, Trash2, ArrowUpDown, RefreshCw, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/store";
-import { deleteDocument } from "@/store/slices/documentSlice";
+import { fetchDocuments, deleteDocumentThunk } from "@/store/slices/documentSlice";
 import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,14 @@ import { Button } from "@/components/ui/button";
 export function DocTable() {
   const dispatch = useAppDispatch();
   const documents = useAppSelector((state) => state.documents.items);
+  const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
+
+  React.useEffect(() => {
+    dispatch(fetchDocuments(DEFAULT_COLLECTION_ID));
+  }, [dispatch]);
   
   const handleDeleteDocument = (id: string) => {
-    dispatch(deleteDocument(id));
+    dispatch(deleteDocumentThunk(id));
     dispatch(removeDocumentFromCollections(id));
   };
   

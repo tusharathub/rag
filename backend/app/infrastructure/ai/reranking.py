@@ -1,5 +1,5 @@
 import logging
-from typing import List, dict
+from typing import List, Dict
 import cohere
 from app.core.config import settings
 from app.interfaces.ai.services import IRerankingService
@@ -24,7 +24,7 @@ class RerankingService(IRerankingService):
         query: str, 
         documents: List[str], 
         top_k: int = 5
-    ) -> List[dict]:
+    ) -> List[Dict]:
         """Reranks the documents relative to the search query."""
         if not documents:
             return []

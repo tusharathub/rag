@@ -66,13 +66,15 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const dispatch = useAppDispatch();
   const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
     let sessionId = activeChatSessionId;
     if (!sessionId) {
-      sessionId = `chat-${Date.now()}`;
+      sessionId = crypto.randomUUID();
       dispatch(addChatSession({ id: sessionId }));
     }
 
@@ -89,13 +91,6 @@ export function useChat() {
     // 2. Set streaming state
     setIsStreaming(true);
 
-    // 3. Find matching response
-    const lowercasePrompt = content.toLowerCase();
-    const match = mockAnswers.find((ans) =>
-      ans.keywords.some((k) => lowercasePrompt.includes(k))
-    );
-    const finalAnswer = match || fallbackAnswer;
-
     // Create an assistant message placeholder
     const aiMessageId = `msg-a-${Date.now()}`;
     const initialAiMessage: ChatMessage = {
@@ -104,29 +99,63 @@ export function useChat() {
       role: "assistant",
       content: "",
       createdAt: new Date().toISOString(),
-      sources: finalAnswer.sources.map(src => ({ ...src, chatMessageId: aiMessageId }))
+      sources: []
     };
 
     // Add empty message to start streaming
     dispatch(addChatMessage({ sessionId, message: initialAiMessage }));
 
-    // Simulate word-by-word streaming
-    const words = finalAnswer.response.split(" ");
-    let currentText = "";
-    let wordIndex = 0;
+    try {
+      const response = await fetch(`${API_BASE}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          collection_id: DEFAULT_COLLECTION_ID,
+          message: content,
+        }),
+      });
 
-    const streamInterval = setInterval(() => {
-      if (wordIndex < words.length) {
-        currentText += (wordIndex === 0 ? "" : " ") + words[wordIndex];
-        
-        dispatch(updateChatMessageText({ sessionId, messageId: aiMessageId, content: currentText }));
-        
-        wordIndex++;
-      } else {
-        clearInterval(streamInterval);
-        setIsStreaming(false);
+      if (!response.ok) {
+        throw new Error("Failed to initialize stream from backend");
       }
-    }, 45 + Math.random() * 20); // Natural streaming latency
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body reader not available");
+      }
+
+      const decoder = new TextDecoder();
+      let currentText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const token = decoder.decode(value, { stream: true });
+        currentText += token;
+        dispatch(
+          updateChatMessageText({
+            sessionId,
+            messageId: aiMessageId,
+            content: currentText,
+          })
+        );
+      }
+    } catch (error: any) {
+      console.error("Stream generation error:", error);
+      dispatch(
+        updateChatMessageText({
+          sessionId,
+          messageId: aiMessageId,
+          content: `Error: Could not connect to chat service. Make sure the backend is running. details: ${error.message}`,
+        })
+      );
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   return {

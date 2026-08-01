@@ -1,17 +1,18 @@
-from pydantic import BaseModel, UUID4, Field
+from pydantic import BaseModel, Field
+from uuid import UUID
 from datetime import datetime
 from typing import Dict, List, Optional
 from app.domain.models.document import DocumentStatus
 
 
 class DocumentResponse(BaseModel):
-    id: UUID4
+    id: UUID
     name: str
     storage_path: str
     file_type: str
     file_size: int
     status: DocumentStatus
-    collection_id: UUID4 = Field(..., serialization_alias="collection_id", validation_alias="organization_id")
+    collection_id: UUID = Field(..., serialization_alias="collection_id", validation_alias="organization_id")
     file_hash: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
