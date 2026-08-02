@@ -114,6 +114,14 @@ class DocumentChunk(Base, TimeStampedModel):
 
     __table_args__ = (
         Index("idx_chunks_metadata_gin", "chunk_metadata", postgresql_using="gin"),
+        Index("ix_document_chunks_collection_id", "collection_id"),
+        Index(
+            "idx_document_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"}
+        ),
     )
 
 
