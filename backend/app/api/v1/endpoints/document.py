@@ -2,6 +2,7 @@ import logging
 from uuid import UUID
 from fastapi import (
     APIRouter, 
+    BackgroundTasks,
     Depends, 
     File, 
     Form, 
@@ -13,7 +14,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.core.config import settings
-from app.api.deps import get_current_user, get_db, get_document_service
+from app.api.deps import get_current_user, get_db, get_document_service, get_document_processing_service
 from app.infrastructure.db.models import User, Collection
 from app.schemas.document import (
     DocumentResponse, 
@@ -22,13 +23,13 @@ from app.schemas.document import (
 )
 from app.services.document import (
     DocumentUploadService, 
+    DocumentProcessingService,
     DuplicateFileError, 
     FileValidationError
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
 
 
 async def verify_collection_ownership(
@@ -68,14 +69,16 @@ async def verify_collection_ownership(
     response_model=DocumentResponse, 
     status_code=status.HTTP_201_CREATED,
     summary="Upload a document",
-    description="Uploads a supported file, validates size/MIME/magic-bytes, checks duplicates, extracts metadata, and stores it."
+    description="Uploads a supported file, validates size/MIME/magic-bytes, checks duplicates, extracts metadata, stores it, and triggers processing."
 )
 async def upload_document(
+    background_tasks: BackgroundTasks,
     collection_id: UUID = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     doc_service: DocumentUploadService = Depends(get_document_service),
+    processing_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
     # Verify collection ownership
     await verify_collection_ownership(collection_id, current_user.id, db)
@@ -88,6 +91,10 @@ async def upload_document(
             file_stream=file.file,
             collection_id=collection_id
         )
+
+        # Trigger document processing in background task
+        background_tasks.add_task(processing_service.process_document, doc_domain.id)
+
         return doc_domain
     except FileValidationError as e:
         raise HTTPException(

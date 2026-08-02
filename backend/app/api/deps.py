@@ -12,7 +12,8 @@ from app.infrastructure.db.models import User
 from app.infrastructure.db.repositories import DocumentRepository
 from app.infrastructure.storage.local import LocalFileStorageService
 from app.infrastructure.storage.s3 import S3FileStorageService
-from app.services.document import DocumentUploadService
+from app.services.document import DocumentUploadService, DocumentProcessingService
+from app.services.preprocessing.pipeline import TextPreprocessingPipeline
 from app.interfaces.ai.services import IEmbeddingService
 from app.infrastructure.ai.embeddings import OpenAIEmbeddingService
 from app.services.chat import ChatService
@@ -34,6 +35,21 @@ async def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentUp
     repository = DocumentRepository(db)
     storage_service = S3FileStorageService() if settings.STORAGE_TYPE == "s3" else LocalFileStorageService()
     return DocumentUploadService(repository, storage_service)
+
+
+async def get_document_processing_service(db: AsyncSession = Depends(get_db)) -> DocumentProcessingService:
+    """FastAPI dependency that constructs and returns the DocumentProcessingService."""
+    repository = DocumentRepository(db)
+    storage_service = S3FileStorageService() if settings.STORAGE_TYPE == "s3" else LocalFileStorageService()
+    embedding_service = await get_embedding_service()
+    preprocessor = TextPreprocessingPipeline(embedding_service=embedding_service)
+    return DocumentProcessingService(
+        repository=repository,
+        storage_service=storage_service,
+        embedding_service=embedding_service,
+        preprocessor=preprocessor
+    )
+
 
 
 async def get_current_user(
