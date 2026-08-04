@@ -159,11 +159,14 @@ class DocumentRepository(IDocumentRepository):
         organization_id: UUID, 
         query_embedding: List[float], 
         query_text: str, 
-        limit: int = 5
+        limit: int = 5,
+        rrf_k: int = 60
     ) -> List[tuple[DocumentChunkDomain, float]]:
-        """Hybrid search implementation (dense similarity + sparse text search)."""
-        # Select chunks belonging to documents in the target collection (organization_id)
-        stmt = (
+        """Hybrid search combining Dense Vector similarity and Sparse Full-Text search fused via Reciprocal Rank Fusion (RRF)."""
+        candidate_limit = limit * 3
+
+        # 1. Dense Vector Search (cosine similarity)
+        dense_stmt = (
             select(DocumentChunk, DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"))
             .join(Document, Document.id == DocumentChunk.document_id)
             .where(
@@ -173,15 +176,59 @@ class DocumentRepository(IDocumentRepository):
                 )
             )
             .order_by("distance")
-            .limit(limit)
+            .limit(candidate_limit)
         )
-        result = await self.db.execute(stmt)
-        rows = result.all()
-        
+        dense_res = await self.db.execute(dense_stmt)
+        dense_rows = dense_res.all()
+
+        # 2. Sparse Text Search (PostgreSQL Full-Text Search websearch_to_tsquery)
+        clean_query = query_text.strip()
+        sparse_rows = []
+        if clean_query:
+            ts_query = func.websearch_to_tsquery('english', clean_query)
+            ts_vector = func.to_tsvector('english', DocumentChunk.content)
+            rank_expr = func.ts_rank_cd(ts_vector, ts_query)
+
+            sparse_stmt = (
+                select(DocumentChunk, rank_expr.label("rank"))
+                .join(Document, Document.id == DocumentChunk.document_id)
+                .where(
+                    and_(
+                        DocumentChunk.collection_id == organization_id,
+                        Document.deleted_at.is_(None),
+                        ts_vector.op("@@")(ts_query)
+                    )
+                )
+                .order_by(rank_expr.desc())
+                .limit(candidate_limit)
+            )
+            sparse_res = await self.db.execute(sparse_stmt)
+            sparse_rows = sparse_res.all()
+
+        # 3. Reciprocal Rank Fusion (RRF)
+        # RRF Score = sum( 1 / (k + rank_i) ) across dense and sparse retrievals
+        rrf_scores: Dict[UUID, float] = {}
+        chunk_map: Dict[UUID, DocumentChunk] = {}
+
+        # Process dense ranks
+        for rank, (db_chunk, _) in enumerate(dense_rows, start=1):
+            chunk_id = db_chunk.id
+            chunk_map[chunk_id] = db_chunk
+            rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank))
+
+        # Process sparse ranks
+        for rank, (db_chunk, _) in enumerate(sparse_rows, start=1):
+            chunk_id = db_chunk.id
+            chunk_map[chunk_id] = db_chunk
+            rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank))
+
+        # Sort candidate chunks by combined RRF score
+        sorted_chunk_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)[:limit]
+
         results = []
-        for db_chunk, distance in rows:
-            # Distance: lower is more similar for cosine distance, convert to a similarity score (1 - distance)
-            score = 1.0 - float(distance) if distance is not None else 0.0
+        for cid in sorted_chunk_ids:
+            db_chunk = chunk_map[cid]
+            score = rrf_scores[cid]
             domain_chunk = DocumentChunkDomain(
                 id=db_chunk.id,
                 document_id=db_chunk.document_id,
@@ -193,7 +240,7 @@ class DocumentRepository(IDocumentRepository):
                 embedding=db_chunk.embedding
             )
             results.append((domain_chunk, score))
-            
+
         return results
 
 

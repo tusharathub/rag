@@ -40,3 +40,6 @@ yarn-error.log*
 # --- OS temporary files ---
 .DS_Store
 Thumbs.db
+
+context.md
+skills.md

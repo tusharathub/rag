@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List, Dict
 import cohere
@@ -32,9 +33,9 @@ class RerankingService(IRerankingService):
         # If Cohere client is active, use it for cross-encoder reranking
         if self.client:
             try:
-                # Cohere client.rerank is synchronous; we run it in a threadpool or call it directly
-                # For simplicity and standard async operations:
-                response = self.client.rerank(
+                # Offload synchronous Cohere client.rerank call to threadpool to prevent blocking async event loop
+                response = await asyncio.to_thread(
+                    self.client.rerank,
                     model="rerank-english-v3.0",
                     query=query,
                     documents=documents,
