@@ -25,7 +25,11 @@ class OpenAIEmbeddingService(IEmbeddingService):
     ):
         self.api_key = api_key or settings.OPENAI_API_KEY
         self.model_name = model_name or settings.EMBEDDING_MODEL
-        self.client = AsyncOpenAI(api_key=self.api_key) if self.api_key else None
+        
+        # Support OpenRouter and custom OpenAI-compatible providers
+        base_url = settings.OPENROUTER_BASE_URL if self.api_key and self.api_key.startswith("sk-or-") else None
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=base_url) if self.api_key else None
+
         
         # Concurrency/Rate Limiting
         self.semaphore = asyncio.Semaphore(max_concurrent_requests)

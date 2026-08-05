@@ -81,12 +81,14 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     COHERE_API_KEY: Optional[str] = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     
     # RAG settings
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIMENSION: int = 1536  # Matches text-embedding-3-small
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     RERANK_MODEL: str = "rerank-english-v3.0"
+
 
     # CORS Config
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]

@@ -166,8 +166,9 @@ class DocumentRepository(IDocumentRepository):
         candidate_limit = limit * 3
 
         # 1. Dense Vector Search (cosine similarity)
+        distance_expr = DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
         dense_stmt = (
-            select(DocumentChunk, DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"))
+            select(DocumentChunk, distance_expr)
             .join(Document, Document.id == DocumentChunk.document_id)
             .where(
                 and_(
@@ -175,9 +176,10 @@ class DocumentRepository(IDocumentRepository):
                     Document.deleted_at.is_(None)
                 )
             )
-            .order_by("distance")
+            .order_by(distance_expr)
             .limit(candidate_limit)
         )
+
         dense_res = await self.db.execute(dense_stmt)
         dense_rows = dense_res.all()
 

@@ -9,8 +9,10 @@ logger = logging.getLogger(__name__)
 class DocumentIntelligenceService:
     def __init__(self):
         api_key = settings.OPENAI_API_KEY or "sk-dummy-key-for-testing"
-        self.client = AsyncOpenAI(api_key=api_key)
+        base_url = settings.OPENROUTER_BASE_URL if api_key.startswith("sk-or-") else None
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = settings.LLM_MODEL
+
 
     async def _call_llm_json(self, prompt: str, system_message: str) -> Dict[str, Any]:
         """Helper to invoke OpenAI with structured JSON response formatting."""

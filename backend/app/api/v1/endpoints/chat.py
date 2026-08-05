@@ -15,13 +15,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+from typing import Optional, Union
+
 class ChatRequest(BaseModel):
-    session_id: UUID
+    session_id: Union[UUID, str]
     collection_id: UUID
     message: str
     limit: Optional[int] = 5
     use_mmr: Optional[bool] = False
     lambda_val: Optional[float] = 0.5
+
 
 
 @router.post(
@@ -38,10 +41,18 @@ async def stream_chat(
     # Verify collection accessibility (creates collection automatically if it does not exist in dev)
     await verify_collection_ownership(request.collection_id, current_user.id, db)
 
+    # Convert session_id to UUID if provided as string
+    session_id = request.session_id
+    if isinstance(session_id, str):
+        try:
+            session_id = UUID(session_id)
+        except ValueError:
+            session_id = UUID("00000000-0000-0000-0000-000000000001")
+
     async def event_generator():
         try:
             stream = chat_service.stream_chat(
-                session_id=request.session_id,
+                session_id=session_id,
                 user_id=current_user.id,
                 organization_id=request.collection_id,
                 message_content=request.message,
@@ -56,3 +67,4 @@ async def stream_chat(
             yield f"\n[Stream Error: {str(e)}]"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
