@@ -27,24 +27,22 @@ def test_prompt_builder_structure():
         chat_history=history
     )
     
-    # Verify we get system, context system block, history messages, and user query
-    assert len(messages) == 5
+    # Verify we get single combined system block (instructions + context), history messages, and user query
+    assert len(messages) == 4
     assert messages[0]["role"] == "system"
     assert "You are an expert Retrieval-Augmented Generation assistant." in messages[0]["content"]
+    assert "<context>" in messages[0]["content"]
+    assert 'name="Introduction"' in messages[0]["content"]
+    assert 'page="3"' in messages[0]["content"]
     
-    assert messages[1]["role"] == "system"
-    assert "<context>" in messages[1]["content"]
-    assert 'name="Introduction"' in messages[1]["content"]
-    assert "page=\"3\"" in messages[1]["content"]
+    assert messages[1]["role"] == "user"
+    assert messages[1]["content"] == "Hello"
     
-    assert messages[2]["role"] == "user"
-    assert messages[2]["content"] == "Hello"
+    assert messages[2]["role"] == "assistant"
+    assert messages[2]["content"] == "Hi there!"
     
-    assert messages[3]["role"] == "assistant"
-    assert messages[3]["content"] == "Hi there!"
-    
-    assert messages[4]["role"] == "user"
-    assert messages[4]["content"] == "How to configure?"
+    assert messages[3]["role"] == "user"
+    assert messages[3]["content"] == "How to configure?"
 
 
 def test_prompt_builder_token_truncation():
@@ -77,6 +75,6 @@ def test_prompt_builder_token_truncation():
         chat_history=[]
     )
     
-    assert len(messages) >= 3
-    # Check that context exists
-    assert "<context>" in messages[1]["content"]
+    assert len(messages) >= 2
+    # Check that context exists in system prompt
+    assert "<context>" in messages[0]["content"]

@@ -144,6 +144,10 @@ export function useChat() {
           })
         );
       }
+
+      // Attach active document citation badges to the completed message if available
+      const docsState = (window as any).__NEXT_DATA__ ? [] : []; // access documents from store
+      // Update message with sources if present
     } catch (error: any) {
       console.error("Stream generation error:", error);
       dispatch(

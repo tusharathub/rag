@@ -138,8 +138,8 @@ class ChatService:
         logger.info(f"Initiating streaming completion for session {session_id}")
         system_prompt = messages[0]["content"]
         user_message_str = messages[-1]["content"]
-        # History format expected by completion service (excluding first system prompt and context prompt)
-        history_msgs = messages[2:-1]
+        # History format expected by completion service (excluding system prompt at index 0)
+        history_msgs = messages[1:-1]
 
         # Get stream generator with retry logic
         stream_generator = await self._execute_with_retry(

@@ -18,14 +18,13 @@ class PromptBuilder:
     def build_system_instructions(self) -> str:
         return (
             "You are an expert Retrieval-Augmented Generation assistant.\n"
-            "Your task is to answer the user's question using ONLY the facts provided in the <context> section.\n"
+            "Your task is to answer the user's question using the facts provided in the <context> section.\n"
             "Strict Grounding Rules:\n"
-            "1. Rely only on the facts inside <context>. Do not assume, extrapolate, or bring in external knowledge.\n"
-            "2. If the context is empty or does not contain enough information to answer, state: "
+            "1. Rely primarily on the facts inside <context>. Do not invent or hallucinate facts.\n"
+            "2. If the user asks general questions like 'what is this file about', 'summarize the file', or 'what documents are uploaded', synthesize a clear summary using the document names and context provided in <context>.\n"
+            "3. If the context contains no relevant information at all to answer a specific factual query, politely state: "
             "'I am sorry, but I cannot find that information in the uploaded documents.'\n"
-            "3. Any fact you state must be followed by an inline citation format: [Document Name, Page Number].\n"
-            "Example: 'The engine starts at 4000 RPM [User_Manual.pdf, p.10].'\n"
-            "4. Do not state facts without citations."
+            "4. Cite the document name and page number whenever referencing facts."
         )
 
     def build_context_block(self, chunks: List[DocumentChunkDomain], available_tokens: int) -> str:
@@ -34,7 +33,11 @@ class PromptBuilder:
         current_tokens = len(self.encoder.encode("<context>\n</context>"))
 
         for idx, chunk in enumerate(chunks, start=1):
-            doc_name = chunk.metadata.get("section_path") or f"document_{chunk.document_id}"
+            doc_name = (
+                chunk.metadata.get("original_filename") or 
+                chunk.metadata.get("section_path") or 
+                f"document_{str(chunk.document_id)[:8]}"
+            )
             page_num = chunk.page_number if chunk.page_number is not None else "N/A"
             
             chunk_xml = (
@@ -86,16 +89,16 @@ class PromptBuilder:
             formatted_history.insert(0, msg)
             history_tokens += msg_tokens
 
-        # 3. Assemble messages payload
+        # 3. Assemble single system prompt with instructions and context block
+        full_system_prompt = (
+            f"{system_instruction}\n\n"
+            f"Retrieved Document Context:\n{context_str}\n\n"
+            "Important: Answer the user's question directly. Do not output internal thought processes."
+        )
+
         messages = [
-            {"role": "system", "content": system_instruction},
+            {"role": "system", "content": full_system_prompt},
         ]
-        
-        # Inject context as a system boundary message preceding user prompt
-        messages.append({
-            "role": "system", 
-            "content": f"Use this context to answer the user:\n{context_str}"
-        })
         
         # Add history
         for msg in formatted_history:

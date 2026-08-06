@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Dict
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy import select, update, and_, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from pgvector.sqlalchemy import Vector
 
@@ -169,6 +170,7 @@ class DocumentRepository(IDocumentRepository):
         distance_expr = DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
         dense_stmt = (
             select(DocumentChunk, distance_expr)
+            .options(joinedload(DocumentChunk.document))
             .join(Document, Document.id == DocumentChunk.document_id)
             .where(
                 and_(
@@ -193,6 +195,7 @@ class DocumentRepository(IDocumentRepository):
 
             sparse_stmt = (
                 select(DocumentChunk, rank_expr.label("rank"))
+                .options(joinedload(DocumentChunk.document))
                 .join(Document, Document.id == DocumentChunk.document_id)
                 .where(
                     and_(
@@ -228,22 +231,50 @@ class DocumentRepository(IDocumentRepository):
         # Sort candidate chunks by combined RRF score
         sorted_chunk_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)[:limit]
 
+        # If no results matched via strict vector/sparse search (e.g., general overview questions),
+        # fallback to fetching top chunks (chunk_index == 0) of active documents in the collection
+        if not sorted_chunk_ids:
+            fallback_stmt = (
+                select(DocumentChunk)
+                .options(joinedload(DocumentChunk.document))
+                .join(Document, Document.id == DocumentChunk.document_id)
+                .where(
+                    and_(
+                        Document.collection_id == organization_id,
+                        Document.deleted_at.is_(None)
+                    )
+                )
+                .order_by(DocumentChunk.chunk_index.asc())
+                .limit(limit)
+            )
+            fallback_res = await self.db.execute(fallback_stmt)
+            fallback_chunks = fallback_res.scalars().all()
+            for db_chunk in fallback_chunks:
+                chunk_map[db_chunk.id] = db_chunk
+                rrf_scores[db_chunk.id] = 0.5
+            sorted_chunk_ids = [c.id for c in fallback_chunks]
+
         results = []
         for cid in sorted_chunk_ids:
             db_chunk = chunk_map[cid]
             score = rrf_scores[cid]
+            
+            # Ensure original_filename is set in metadata using Document.name if available
+            meta = dict(db_chunk.chunk_metadata) if db_chunk.chunk_metadata else {}
+            if "original_filename" not in meta and hasattr(db_chunk, "document") and db_chunk.document:
+                meta["original_filename"] = db_chunk.document.name
+
             domain_chunk = DocumentChunkDomain(
                 id=db_chunk.id,
                 document_id=db_chunk.document_id,
-                collection_id=organization_id,  # passed in as query param; no collection_id column on chunks
+                collection_id=organization_id,
                 content=db_chunk.content,
                 chunk_index=db_chunk.chunk_index,
                 page_number=db_chunk.page_number,
-                metadata=db_chunk.chunk_metadata if db_chunk.chunk_metadata else {},
+                metadata=meta,
                 embedding=db_chunk.embedding
             )
             results.append((domain_chunk, score))
-
 
         return results
 
