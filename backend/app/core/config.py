@@ -77,10 +77,15 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
 
-    # AI Configurations
+    # AI Configurations & Provider Settings
+    LLM_PROVIDER: str = "openrouter"  # openrouter, openai, anthropic, custom, ollama, groq
+    LLM_BASE_URL: Optional[str] = None  # Custom OpenAI-compatible base URL (e.g., http://localhost:11434/v1)
+    
     OPENAI_API_KEY: Optional[str] = None
+    OPENROUTER_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     COHERE_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     
     # RAG settings

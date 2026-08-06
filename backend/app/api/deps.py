@@ -114,6 +114,8 @@ async def get_current_user(
     return user
 
 
+from app.infrastructure.ai.chat_completion import LLMProviderFactory
+
 async def get_chat_service(db: AsyncSession = Depends(get_db)) -> ChatService:
     """FastAPI dependency that constructs and returns the ChatService."""
     chat_repository = ChatRepository(db)
@@ -123,7 +125,7 @@ async def get_chat_service(db: AsyncSession = Depends(get_db)) -> ChatService:
     retrieval_service = RetrievalService(
         db, document_repository, embedding_service, reranking_service
     )
-    llm_service = OpenAIChatCompletionService()
+    llm_service = LLMProviderFactory.create_provider()
     return ChatService(
         chat_repository=chat_repository,
         retrieval_service=retrieval_service,
