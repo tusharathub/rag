@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Document } from "@/types";
+import { useAuth } from "@clerk/nextjs";
 
 interface UploadingFile {
   name: string;
@@ -40,7 +41,10 @@ export function UploadModal() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
-  const processFiles = (files: FileList) => {
+  const { getToken } = useAuth();
+
+  const processFiles = async (files: FileList) => {
+    const token = await getToken();
     const newItems: UploadingFile[] = Array.from(files).map((file) => ({
       name: file.name,
       size: file.size,
@@ -59,6 +63,10 @@ export function UploadModal() {
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${API_BASE}/documents/upload`, true);
+
+      if (token) {
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
 
       // Track progress
       xhr.upload.onprogress = (e) => {

@@ -13,6 +13,7 @@ import { useAppSelector } from "@/store";
 import { Bell, Sparkles, FolderLock, MessageSquare, Layers, LayoutDashboard, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
+import { UserButton } from "@clerk/nextjs";
 
 export default function WorkspacePage() {
   const activePanel = useAppSelector((state) => state.ui.activePanel);
@@ -105,7 +106,7 @@ export default function WorkspacePage() {
             {/* Quick Stats shortcut */}
             <div className="hidden sm:flex items-center gap-1 bg-indigo-500/10 text-indigo-500 text-xs font-semibold px-2.5 py-1 rounded-full border border-indigo-500/10">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Free Account</span>
+              <span>Pro Plan</span>
             </div>
 
             {/* Notifications mock button */}
@@ -116,6 +117,8 @@ export default function WorkspacePage() {
             >
               <Bell className="h-4.5 w-4.5" />
             </Button>
+
+            <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </header>
 

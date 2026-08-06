@@ -5,6 +5,7 @@ import {
   FileText, Lightbulb, HelpCircle, CheckSquare, Clock, 
   Table, Tag, Cpu, GitCompare, Sparkles, Loader2 
 } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
 
 interface Props {
   documentId: string;
@@ -16,12 +17,19 @@ export function DocumentIntelligenceSuite({ documentId, documentTitle }: Props) 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
 
+  const { getToken } = useAuth();
+
   const fetchFeature = async (endpoint: string, payload?: any) => {
     setLoading(true);
     try {
+      const token = await getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/v1/intelligence/${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: payload ? JSON.stringify(payload) : undefined
       });
       const json = await res.json();

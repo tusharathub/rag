@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { addChatMessage, addChatSession, updateChatMessageText } from "@/store/slices/chatSlice";
 import { ChatMessage, ChatMessageSource } from "@/types";
+import { useAuth } from "@clerk/nextjs";
 
 const mockAnswers = [
   {
@@ -69,6 +70,8 @@ export function useChat() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
+  const { getToken } = useAuth();
+
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
@@ -106,11 +109,17 @@ export function useChat() {
     dispatch(addChatMessage({ sessionId, message: initialAiMessage }));
 
     try {
+      const token = await getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${API_BASE}/chat/stream`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           session_id: sessionId,
           collection_id: DEFAULT_COLLECTION_ID,

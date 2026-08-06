@@ -7,6 +7,9 @@ import { ToastContainer } from "@/components/ui/toast";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(() => new QueryClient());
   const [theme, setTheme] = React.useState<"light" | "dark">("dark"); // Default dark mode
@@ -40,12 +43,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <ToastContainer />
-      </QueryClientProvider>
-    </Provider>
+    <ClerkProvider appearance={{ baseTheme: theme === "dark" ? dark : undefined }}>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <ToastContainer />
+        </QueryClientProvider>
+      </Provider>
+    </ClerkProvider>
   );
 }
 

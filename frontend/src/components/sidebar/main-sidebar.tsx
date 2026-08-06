@@ -18,6 +18,7 @@ import { setActivePanel, toggleSidebar, setUploadModalOpen } from "@/store/slice
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
 
 export function MainSidebar() {
   const dispatch = useAppDispatch();
@@ -124,18 +125,28 @@ export function MainSidebar() {
         )}
 
         {/* Profile Card / Controls */}
-        <div className={cn("flex items-center justify-between", sidebarCollapsed && "justify-center")}>
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs text-indigo-300">
-                JD
-              </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-xs font-semibold text-slate-200 truncate">John Doe</span>
-                <span className="text-[10px] text-slate-400 truncate">john@rag.ai</span>
-              </div>
+        <div className={cn("flex items-center justify-between gap-2", sidebarCollapsed && "justify-center")}>
+          <SignedIn>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <UserButton
+                afterSignOutUrl="/sign-in"
+                appearance={{
+                  elements: {
+                    avatarBox: "h-8 w-8",
+                  },
+                }}
+              />
             </div>
-          )}
+          </SignedIn>
+          <SignedOut>
+            {!sidebarCollapsed && (
+              <SignInButton mode="modal">
+                <Button size="sm" variant="outline" className="text-xs">
+                  Sign In
+                </Button>
+              </SignInButton>
+            )}
+          </SignedOut>
           <ThemeToggle />
         </div>
       </div>

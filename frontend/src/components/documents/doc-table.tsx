@@ -8,17 +8,24 @@ import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+import { useAuth } from "@clerk/nextjs";
+
 export function DocTable() {
   const dispatch = useAppDispatch();
+  const { getToken } = useAuth();
   const documents = useAppSelector((state) => state.documents.items);
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   React.useEffect(() => {
-    dispatch(fetchDocuments(DEFAULT_COLLECTION_ID));
-  }, [dispatch]);
+    (async () => {
+      const token = await getToken();
+      dispatch(fetchDocuments({ collectionId: DEFAULT_COLLECTION_ID, token }));
+    })();
+  }, [dispatch, getToken]);
   
-  const handleDeleteDocument = (id: string) => {
-    dispatch(deleteDocumentThunk(id));
+  const handleDeleteDocument = async (id: string) => {
+    const token = await getToken();
+    dispatch(deleteDocumentThunk({ documentId: id, token }));
     dispatch(removeDocumentFromCollections(id));
   };
   
