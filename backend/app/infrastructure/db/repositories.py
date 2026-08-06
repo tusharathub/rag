@@ -119,7 +119,6 @@ class DocumentRepository(IDocumentRepository):
             DocumentChunk(
                 id=chunk.id,
                 document_id=chunk.document_id,
-                collection_id=chunk.collection_id,
                 content=chunk.content,
                 chunk_index=chunk.chunk_index,
                 page_number=chunk.page_number,
@@ -128,6 +127,7 @@ class DocumentRepository(IDocumentRepository):
             )
             for chunk in chunks
         ]
+
         self.db.add_all(db_chunks)
         await self.db.flush()
 
@@ -172,7 +172,7 @@ class DocumentRepository(IDocumentRepository):
             .join(Document, Document.id == DocumentChunk.document_id)
             .where(
                 and_(
-                    DocumentChunk.collection_id == organization_id,
+                    Document.collection_id == organization_id,
                     Document.deleted_at.is_(None)
                 )
             )
@@ -196,7 +196,7 @@ class DocumentRepository(IDocumentRepository):
                 .join(Document, Document.id == DocumentChunk.document_id)
                 .where(
                     and_(
-                        DocumentChunk.collection_id == organization_id,
+                        Document.collection_id == organization_id,
                         Document.deleted_at.is_(None),
                         ts_vector.op("@@")(ts_query)
                     )
@@ -204,6 +204,7 @@ class DocumentRepository(IDocumentRepository):
                 .order_by(rank_expr.desc())
                 .limit(candidate_limit)
             )
+
             sparse_res = await self.db.execute(sparse_stmt)
             sparse_rows = sparse_res.all()
 
@@ -234,14 +235,15 @@ class DocumentRepository(IDocumentRepository):
             domain_chunk = DocumentChunkDomain(
                 id=db_chunk.id,
                 document_id=db_chunk.document_id,
-                collection_id=db_chunk.collection_id,
+                collection_id=organization_id,  # passed in as query param; no collection_id column on chunks
                 content=db_chunk.content,
                 chunk_index=db_chunk.chunk_index,
                 page_number=db_chunk.page_number,
-                metadata=db_chunk.chunk_metadata,
+                metadata=db_chunk.chunk_metadata if db_chunk.chunk_metadata else {},
                 embedding=db_chunk.embedding
             )
             results.append((domain_chunk, score))
+
 
         return results
 

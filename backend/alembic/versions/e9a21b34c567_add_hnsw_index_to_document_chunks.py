@@ -19,16 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create collection_id index on document_chunks if it doesn't exist
-    op.create_index(
-        op.f('ix_document_chunks_collection_id'),
-        'document_chunks',
-        ['collection_id'],
-        unique=False,
-        if_not_exists=True
-    )
-    
     # Create HNSW index for high-performance vector similarity search
+    # Note: collection_id does NOT exist on document_chunks — collections are
+    # resolved via the Document FK join, so no collection_id index is needed here.
     op.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding_hnsw 
@@ -41,4 +34,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_document_chunks_embedding_hnsw;")
-    op.drop_index(op.f('ix_document_chunks_collection_id'), table_name='document_chunks', if_exists=True)
