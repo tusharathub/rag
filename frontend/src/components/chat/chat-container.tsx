@@ -18,7 +18,7 @@ export function ChatContainer() {
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   React.useEffect(() => {
-    dispatch(fetchDocuments(DEFAULT_COLLECTION_ID));
+    dispatch(fetchDocuments({ collectionId: DEFAULT_COLLECTION_ID }));
   }, [dispatch]);
 
   const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
