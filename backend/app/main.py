@@ -1,7 +1,16 @@
+import sys
+from pathlib import Path
+
+# Ensure the backend root directory is on sys.path for absolute imports on deployment platforms
+backend_root = str(Path(__file__).resolve().parent.parent)
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+
 
 
 @asynccontextmanager
