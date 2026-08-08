@@ -1,13 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Search, FileText, Trash2, ArrowUpDown, RefreshCw, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Search, FileText, Trash2, ArrowUpDown, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { fetchDocuments, deleteDocumentThunk } from "@/store/slices/documentSlice";
 import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
 import { useAuth } from "@clerk/nextjs";
 
 export function DocTable() {
@@ -74,132 +71,130 @@ export function DocTable() {
     switch (status) {
       case "COMPLETED":
         return (
-          <Badge variant="success" className="gap-1 flex items-center w-fit">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 rounded inline-flex items-center gap-1">
             <CheckCircle className="h-3 w-3" />
-            <span>Ready</span>
-          </Badge>
+            <span>INDEXED</span>
+          </span>
         );
       case "PROCESSING":
         return (
-          <Badge variant="warning" className="gap-1 flex items-center w-fit animate-pulse">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[#FFA028]/10 text-[#FFA028] border border-[#FFA028]/40 rounded inline-flex items-center gap-1 animate-pulse">
             <Clock className="h-3 w-3" />
-            <span>Parsing</span>
-          </Badge>
+            <span>CHUNKING</span>
+          </span>
         );
       case "FAILED":
         return (
-          <Badge variant="destructive" className="gap-1 flex items-center w-fit">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-rose-950/80 text-rose-400 border border-rose-500/40 rounded inline-flex items-center gap-1">
             <AlertCircle className="h-3 w-3" />
-            <span>Error</span>
-          </Badge>
+            <span>FAILED</span>
+          </span>
         );
       default:
         return (
-          <Badge variant="secondary" className="gap-1 flex items-center w-fit">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-700 rounded inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            <span>Pending</span>
-          </Badge>
+            <span>PENDING</span>
+          </span>
         );
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-mono">
       {/* Filters block */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#FFA028]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search documents..."
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-slate-800 rounded bg-[#080808] text-white focus:outline-none focus:border-[#FFA028] text-xs font-mono"
           />
         </div>
-        <div className="text-xs text-muted-foreground font-semibold">
-          Showing {filteredAndSortedDocs.length} of {documents.length} files
+        <div className="text-xs text-slate-400">
+          Showing {filteredAndSortedDocs.length} of {documents.length} vector files
         </div>
       </div>
 
       {/* Grid container */}
-      <div className="border border-slate-250 dark:border-slate-800 rounded-2xl overflow-hidden dark:bg-slate-900 bg-white">
+      <div className="border border-slate-900 rounded-lg overflow-hidden bg-[#0C0C0C] shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 text-xs font-bold uppercase tracking-wider text-muted-foreground select-none">
+              <tr className="border-b border-slate-900 bg-[#080808] text-xs font-bold uppercase tracking-wider text-slate-400 select-none">
                 <th
                   onClick={() => handleSort("name")}
-                  className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Filename</span>
-                    <ArrowUpDown className="h-3.5 w-3.5" />
+                    <ArrowUpDown className="h-3.5 w-3.5 text-[#FFA028]" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("fileSize")}
-                  className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>File Size</span>
-                    <ArrowUpDown className="h-3.5 w-3.5" />
+                    <ArrowUpDown className="h-3.5 w-3.5 text-[#FFA028]" />
                   </div>
                 </th>
                 <th className="px-6 py-4">Status</th>
                 <th
                   onClick={() => handleSort("createdAt")}
-                  className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Uploaded At</span>
-                    <ArrowUpDown className="h-3.5 w-3.5" />
+                    <span>Ingested At</span>
+                    <ArrowUpDown className="h-3.5 w-3.5 text-[#FFA028]" />
                   </div>
                 </th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+            <tbody className="divide-y divide-slate-900 text-xs">
               {filteredAndSortedDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                    No documents match your query.
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-mono">
+                    No documents match your query. Upload files to get started.
                   </td>
                 </tr>
               ) : (
                 filteredAndSortedDocs.map((doc) => (
                   <tr
                     key={doc.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-850/50 transition-colors"
+                    className="hover:bg-slate-900/60 transition-colors"
                   >
-                    <td className="px-6 py-4 font-semibold text-foreground">
+                    <td className="px-6 py-4 font-bold text-white">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                        <div className="p-2 rounded bg-black border border-[#FFA028]/30 text-[#FFA028]">
                           <FileText className="h-4 w-4" />
                         </div>
                         <span className="truncate max-w-xs">{doc.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground font-medium">
+                    <td className="px-6 py-4 text-slate-400">
                       {formatSize(doc.fileSize)}
                     </td>
                     <td className="px-6 py-4">{renderStatus(doc.status)}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                    <td className="px-6 py-4 text-slate-400">
                       {new Date(doc.createdAt).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <button
                         onClick={() => handleDeleteDocument(doc.id)}
-                        className="text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg h-9 w-9"
+                        className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded transition-colors"
                         title="Delete file"
                       >
-                        <Trash2 className="h-4.5 w-4.5" />
-                      </Button>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))

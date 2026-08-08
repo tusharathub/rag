@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { User, Bot, FileText, ExternalLink } from "lucide-react";
+import { User, Bot } from "lucide-react";
 import { useAppSelector } from "@/store";
 import { cn } from "@/utils/cn";
 import { SourceCitations } from "./source-citations";
@@ -19,11 +19,13 @@ export function ChatMessages({ sessionId }: { sessionId: string }) {
 
   if (messages.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground space-y-3">
-        <Bot className="h-10 w-10 text-indigo-500/40" />
+      <div className="h-full flex flex-col items-center justify-center p-8 text-center text-slate-500 font-mono space-y-3">
+        <div className="p-3 rounded bg-black border border-slate-800 text-[#FFA028]">
+          <Bot className="h-6 w-6" />
+        </div>
         <div>
-          <p className="text-sm font-semibold">Beginning of chat session</p>
-          <p className="text-xs">Ask a question regarding your uploaded knowledge files.</p>
+          <p className="text-xs font-bold text-white">Beginning of chat session</p>
+          <p className="text-[11px] text-slate-400 font-sans">Ask a question regarding your uploaded knowledge files.</p>
         </div>
       </div>
     );
@@ -34,10 +36,10 @@ export function ChatMessages({ sessionId }: { sessionId: string }) {
     if (!text) return "";
     
     // Bold
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-foreground">$1</strong>');
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
     
     // Bullet points
-    formatted = formatted.replace(/^\s*[-*]\s+(.*)$/gm, '<li class="ml-4 list-disc text-sm py-0.5">$1</li>');
+    formatted = formatted.replace(/^\s*[-*]\s+(.*)$/gm, '<li class="ml-4 list-disc text-xs py-0.5">$1</li>');
     
     // Convert newlines to paragraphs
     formatted = formatted.split("\n\n").map((para) => {
@@ -51,10 +53,9 @@ export function ChatMessages({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 font-mono text-xs">
       {messages.map((msg, index) => {
         const isUser = msg.role === "user";
-        const isLast = index === messages.length - 1;
 
         return (
           <div
@@ -67,35 +68,35 @@ export function ChatMessages({ sessionId }: { sessionId: string }) {
             {/* Avatar */}
             <div
               className={cn(
-                "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white shadow-sm",
+                "h-7 w-7 rounded flex items-center justify-center flex-shrink-0 text-slate-950 font-bold shadow-sm",
                 isUser
-                  ? "bg-primary shadow-primary/20"
-                  : "bg-gradient-to-tr from-violet-600 to-indigo-500 shadow-indigo-500/20"
+                  ? "bg-[#FFA028]"
+                  : "bg-black border border-[#FFA028]/40 text-[#FFA028]"
               )}
             >
-              {isUser ? <User className="h-4.5 w-4.5" /> : <Bot className="h-4.5 w-4.5" />}
+              {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
             </div>
 
             {/* Bubble */}
-            <div className="space-y-2">
+            <div className="space-y-2 max-w-2xl">
               <div
                 className={cn(
-                  "p-4 rounded-2xl text-sm border shadow-sm transition-all duration-300",
+                  "p-4 rounded text-xs border shadow-md transition-all duration-150 leading-relaxed font-sans",
                   isUser
-                    ? "bg-primary text-primary-foreground border-transparent rounded-tr-none"
-                    : "bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 rounded-tl-none text-foreground"
+                    ? "bg-[#FFA028] text-slate-950 font-medium border-transparent font-mono"
+                    : "bg-[#080808] border-slate-900 text-slate-200"
                 )}
               >
                 {!isUser && msg.content === "" ? (
                   /* Streaming indicator */
-                  <div className="flex items-center gap-1 py-1 px-2">
-                    <span className="h-2 w-2 rounded-full bg-indigo-500 typing-dot" />
-                    <span className="h-2 w-2 rounded-full bg-indigo-500 typing-dot" />
-                    <span className="h-2 w-2 rounded-full bg-indigo-500 typing-dot" />
+                  <div className="flex items-center gap-1.5 py-1">
+                    <span className="h-2 w-2 rounded-full bg-[#FFA028] typing-dot" />
+                    <span className="h-2 w-2 rounded-full bg-[#FFA028] typing-dot" />
+                    <span className="h-2 w-2 rounded-full bg-[#FFA028] typing-dot" />
                   </div>
                 ) : (
                   <div
-                    className="prose dark:prose-invert max-w-none text-inherit"
+                    className="max-w-none text-inherit"
                     dangerouslySetInnerHTML={{ __html: formatContent(msg.content) }}
                   />
                 )}

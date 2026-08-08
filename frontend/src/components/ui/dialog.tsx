@@ -29,11 +29,11 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 bg-black/85 backdrop-blur-sm transition-opacity duration-300"
         onClick={() => onOpenChange(false)}
       />
       {/* Content wrapper */}
-      <div className="relative z-10 w-full max-w-lg transform overflow-hidden rounded-2xl border bg-background p-6 shadow-2xl transition-all duration-300 dark:border-white/10 glass-panel scale-100 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-10 w-full max-w-lg transform overflow-hidden rounded-xl border border-slate-900 bg-[#0C0C0C] p-6 shadow-2xl transition-all duration-300 font-mono clip-chamfer animate-in fade-in zoom-in-95">
         {children}
       </div>
     </div>
@@ -50,11 +50,11 @@ export function DialogContent({
   onClose?: () => void;
 }) {
   return (
-    <div className={cn("flex flex-col space-y-4", className)}>
+    <div className={cn("flex flex-col space-y-4 font-mono", className)}>
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none"
+          className="absolute right-4 top-4 rounded p-1 text-slate-400 hover:text-white hover:bg-slate-900 transition-colors focus:outline-none"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -72,7 +72,7 @@ export function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left",
+        "flex flex-col space-y-1 text-left",
         className
       )}
       {...props}
@@ -87,7 +87,7 @@ export function DialogTitle({
   return (
     <h2
       className={cn(
-        "text-lg font-semibold leading-none tracking-tight",
+        "text-lg font-bold text-white tracking-tight uppercase flex items-center gap-2",
         className
       )}
       {...props}
@@ -101,7 +101,7 @@ export function DialogDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-xs text-slate-400 font-sans leading-relaxed", className)}
       {...props}
     />
   );
