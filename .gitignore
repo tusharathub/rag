@@ -9,7 +9,9 @@ env/
 .env
 .pytest_cache/
 .mypy_cache/
-storage/
+/backend/storage/
+backend/storage/
+
 
 # --- Node / Frontend ---
 node_modules/
