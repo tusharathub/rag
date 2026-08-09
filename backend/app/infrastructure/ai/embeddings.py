@@ -12,25 +12,28 @@ from app.interfaces.ai.services import IEmbeddingService
 logger = logging.getLogger(__name__)
 
 
+_GLOBAL_REDIS_CLIENT: Optional[aioredis.Redis] = None
+_GLOBAL_REDIS_CHECKED: bool = False
+_IN_MEMORY_EMBED_CACHE: Dict[str, List[float]] = {}
+
+
 class OpenAIEmbeddingService(IEmbeddingService):
-    """Production-grade embedding service using OpenAI API with batching, retries, rate limiting, and Redis caching."""
+    """OpenAI text-embedding-3-small service with in-memory & Redis caching."""
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         model_name: Optional[str] = None,
+        max_concurrent_requests: int = 10,
         redis_url: Optional[str] = None,
-        max_concurrent_requests: int = 5,
-        cache_ttl_seconds: int = 86400 * 7,  # Default 7 days
+        cache_ttl_seconds: int = 86400 * 7,
     ):
-        self.api_key = api_key or settings.OPENAI_API_KEY
-        self.model_name = model_name or settings.EMBEDDING_MODEL
+        self.api_key = api_key or settings.OPENAI_API_KEY or settings.OPENROUTER_API_KEY
+        self.model_name = model_name or settings.EMBEDDING_MODEL or "text-embedding-3-small"
         
-        # Support OpenRouter and custom OpenAI-compatible providers
         base_url = settings.OPENROUTER_BASE_URL if self.api_key and self.api_key.startswith("sk-or-") else None
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=base_url) if self.api_key else None
 
-        
         # Concurrency/Rate Limiting
         self.semaphore = asyncio.Semaphore(max_concurrent_requests)
         
@@ -38,22 +41,26 @@ class OpenAIEmbeddingService(IEmbeddingService):
         self.redis_url = redis_url or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
         self.redis_client: Optional[aioredis.Redis] = None
         self.cache_ttl = cache_ttl_seconds
-        self._redis_initialized = False
 
     async def _init_redis(self):
-        """Lazy-initialize Redis connection to avoid blocking constructor."""
-        if self._redis_initialized:
+        """Lazy-initialize Redis connection once globally to avoid connection overhead or repeated log spam."""
+        global _GLOBAL_REDIS_CLIENT, _GLOBAL_REDIS_CHECKED
+        if _GLOBAL_REDIS_CHECKED:
+            self.redis_client = _GLOBAL_REDIS_CLIENT
             return
+
         try:
-            self.redis_client = aioredis.from_url(self.redis_url, decode_responses=True)
-            # Test connection
-            await self.redis_client.ping()
-            self._redis_initialized = True
+            client = aioredis.from_url(self.redis_url, decode_responses=True)
+            await client.ping()
+            _GLOBAL_REDIS_CLIENT = client
+            _GLOBAL_REDIS_CHECKED = True
+            self.redis_client = client
             logger.info("Successfully connected to Redis cache for embeddings.")
         except Exception as e:
-            logger.warning(f"Redis cache initialization failed, running without Redis caching: {e}")
+            logger.info(f"Redis cache not connected ({e}). Operating with fast in-memory embedding cache.")
+            _GLOBAL_REDIS_CLIENT = None
+            _GLOBAL_REDIS_CHECKED = True
             self.redis_client = None
-            self._redis_initialized = True
 
     def _get_cache_key(self, text: str) -> str:
         """Generate a unique cache key based on model and text content."""
@@ -61,17 +68,23 @@ class OpenAIEmbeddingService(IEmbeddingService):
         return f"embed:{self.model_name}:{text_hash}"
 
     async def _get_cached_embeddings(self, texts: List[str]) -> tuple[List[Optional[List[float]]], List[int]]:
-        """Checks Redis for cached embeddings. Returns list of cached embeddings and indices of missing ones."""
+        """Checks Redis or in-memory cache for cached embeddings."""
         await self._init_redis()
         cached_results: List[Optional[List[float]]] = [None] * len(texts)
         missing_indices: List[int] = []
 
         if not self.redis_client:
-            return cached_results, list(range(len(texts)))
+            # High-speed in-memory fallback cache
+            for idx, text in enumerate(texts):
+                key = self._get_cache_key(text)
+                if key in _IN_MEMORY_EMBED_CACHE:
+                    cached_results[idx] = _IN_MEMORY_EMBED_CACHE[key]
+                else:
+                    missing_indices.append(idx)
+            return cached_results, missing_indices
 
         try:
             keys = [self._get_cache_key(text) for text in texts]
-            # Bulk get from Redis
             cached_vals = await self.redis_client.mget(keys)
             for idx, val in enumerate(cached_vals):
                 if val:
@@ -85,9 +98,16 @@ class OpenAIEmbeddingService(IEmbeddingService):
         return cached_results, missing_indices
 
     async def _write_to_cache(self, texts: List[str], embeddings: List[List[float]]):
-        """Write newly computed embeddings to Redis cache in bulk."""
+        """Write newly computed embeddings to Redis or in-memory cache."""
         await self._init_redis()
-        if not self.redis_client or not texts or not embeddings:
+        if not texts or not embeddings:
+            return
+
+        if not self.redis_client:
+            # Write to in-memory fallback cache
+            for text, emb in zip(texts, embeddings):
+                key = self._get_cache_key(text)
+                _IN_MEMORY_EMBED_CACHE[key] = emb
             return
 
         try:

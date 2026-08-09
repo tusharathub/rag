@@ -20,15 +20,15 @@ async def readiness_probe(db: AsyncSession = Depends(deps.get_db)):
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
 
-    # 2. Check Redis Cache
+    # 2. Check Redis Cache (optional performance layer)
     try:
         r = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
         await r.ping()
         await r.aclose()
     except Exception as e:
-        redis_status = f"unhealthy: {str(e)}"
+        redis_status = "disabled (in-memory mode)"
 
-    if db_status != "healthy" or redis_status != "healthy":
+    if db_status != "healthy":
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"status": "unhealthy", "database": db_status, "redis": redis_status}
