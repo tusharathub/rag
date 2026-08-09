@@ -3,7 +3,7 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Docs Orbit // Enterprise RAG Platform",
+  title: "Docs Orbit - Enterprise RAG Platform",
   description: "Sub-10ms pgvector dense similarity queries, Cohere v3 reranking, and multi-format document ingestion.",
   icons: {
     icon: "/icon.svg",
