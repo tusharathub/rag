@@ -3,8 +3,13 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RAG.ai - Modern Document Assistant Dashboard",
-  description: "AI search engine, contextual chat, and library parser built on NextJS and pgvector.",
+  title: "RAG Engine // Enterprise RAG Platform",
+  description: "Sub-10ms pgvector dense similarity queries, Cohere v3 reranking, and multi-format document ingestion.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

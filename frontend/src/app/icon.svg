@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <!-- Outer Dark Box Container -->
+  <rect width="512" height="512" rx="110" fill="#0A0A0A" />
+  <rect x="16" y="16" width="480" height="480" rx="94" stroke="#FFA028" stroke-width="12" stroke-opacity="0.4" />
+  
+  <!-- Outer Circuit Pins -->
+  <rect x="180" y="56" width="32" height="60" rx="8" fill="#FFA028" />
+  <rect x="300" y="56" width="32" height="60" rx="8" fill="#FFA028" />
+  <rect x="180" y="396" width="32" height="60" rx="8" fill="#FFA028" />
+  <rect x="300" y="396" width="32" height="60" rx="8" fill="#FFA028" />
+  <rect x="56" y="180" width="60" height="32" rx="8" fill="#FFA028" />
+  <rect x="56" y="300" width="60" height="32" rx="8" fill="#FFA028" />
+  <rect x="396" y="180" width="60" height="32" rx="8" fill="#FFA028" />
+  <rect x="396" y="300" width="60" height="32" rx="8" fill="#FFA028" />
+
+  <!-- Main Chip Body -->
+  <rect x="116" y="116" width="280" height="280" rx="44" fill="#FFA028" />
+
+  <!-- Inner Dark Die -->
+  <rect x="166" y="166" width="180" height="180" rx="28" fill="#0A0A0A" />
+
+  <!-- Central Core Element -->
+  <rect x="216" y="216" width="80" height="80" rx="16" fill="#FFA028" />
+  <circle cx="256" cy="256" r="18" fill="#0A0A0A" />
+</svg>

@@ -9,7 +9,7 @@ export default function LandingPage() {
   const [waitlistOpen, setWaitlistOpen] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
-  const [openFaq, setOpenFaq] = React.useState<number | null>(1); // 02 open by default
+  const [openFaq, setOpenFaq] = React.useState<number | null>(0); // 01 open by default
 
   const handleWaitlistSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -520,6 +520,7 @@ export default function LandingPage() {
             <a href="#problem" className="hover:text-white transition-colors">THE PROBLEM</a>
             <a href="#architecture" className="hover:text-white transition-colors">ARCHITECTURE</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <a href="https://www.linkedin.com/in/tushar-nailwal/" target="_blank" className="hover:text-white transition-colors">LinkedIn</a>
             <Link href="/workspace" className="text-[#FFA028] hover:underline font-bold">LAUNCH WORKSPACE</Link>
           </div>
 
