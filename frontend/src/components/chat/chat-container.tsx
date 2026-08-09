@@ -9,11 +9,15 @@ import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { cn } from "@/utils/cn";
 
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
+
 export function ChatContainer() {
   const dispatch = useAppDispatch();
   const chatSessions = useAppSelector((state) => state.chat.sessions);
   const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
   const documents = useAppSelector((state) => state.documents.items);
+
+  const [sessionToDelete, setSessionToDelete] = React.useState<{ id: string; title: string } | null>(null);
 
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -132,7 +136,7 @@ export function ChatContainer() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      dispatch(deleteChatSession(session.id));
+                      setSessionToDelete({ id: session.id, title: session.title });
                     }}
                     className={cn(
                       "opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity",
@@ -249,6 +253,22 @@ export function ChatContainer() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={!!sessionToDelete}
+        onOpenChange={(open) => {
+          if (!open) setSessionToDelete(null);
+        }}
+        title="Delete Chat Session"
+        description="Are you sure you want to delete this conversation session? All message history will be permanently cleared."
+        itemName={sessionToDelete?.title}
+        onConfirm={() => {
+          if (sessionToDelete) {
+            dispatch(deleteChatSession(sessionToDelete.id));
+            setSessionToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

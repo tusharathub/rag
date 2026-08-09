@@ -8,6 +8,8 @@ import { addCollection, deleteCollection } from "@/store/slices/collectionSlice"
 import { addChatSession } from "@/store/slices/chatSlice";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
+
 export function CollectionGrid() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -17,6 +19,7 @@ export function CollectionGrid() {
   const [name, setName] = React.useState("");
   const [selectedDocs, setSelectedDocs] = React.useState<string[]>([]);
   const [isCreating, setIsCreating] = React.useState(false);
+  const [colToDelete, setColToDelete] = React.useState<{ id: string; name: string } | null>(null);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +164,7 @@ export function CollectionGrid() {
                 <span>CHAT</span>
               </button>
               <button
-                onClick={() => dispatch(deleteCollection(col.id))}
+                onClick={() => setColToDelete({ id: col.id, name: col.name })}
                 className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 p-2 rounded transition-colors"
                 title="Delete Collection"
               >
@@ -171,6 +174,22 @@ export function CollectionGrid() {
           </Card>
         ))}
       </div>
+
+      <ConfirmDeleteModal
+        open={!!colToDelete}
+        onOpenChange={(open) => {
+          if (!open) setColToDelete(null);
+        }}
+        title="Delete Collection"
+        description="Are you sure you want to delete this document collection?"
+        itemName={colToDelete?.name}
+        onConfirm={() => {
+          if (colToDelete) {
+            dispatch(deleteCollection(colToDelete.id));
+            setColToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

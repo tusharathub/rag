@@ -9,12 +9,16 @@ import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
 import { addChatSession } from "@/store/slices/chatSlice";
 import { useAuth } from "@clerk/nextjs";
 
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
+
 export function DocTable() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { getToken } = useAuth();
   const documents = useAppSelector((state) => state.documents.items);
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
+
+  const [docToDelete, setDocToDelete] = React.useState<{ id: string; name: string } | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -207,7 +211,7 @@ export function DocTable() {
                         <span>CHAT</span>
                       </button>
                       <button
-                        onClick={() => handleDeleteDocument(doc.id)}
+                        onClick={() => setDocToDelete({ id: doc.id, name: doc.name })}
                         className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded transition-colors inline-flex items-center"
                         title="Delete file"
                       >
@@ -221,6 +225,22 @@ export function DocTable() {
           </table>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        open={!!docToDelete}
+        onOpenChange={(open) => {
+          if (!open) setDocToDelete(null);
+        }}
+        title="Delete Document"
+        description="Are you sure you want to permanently delete this document? This will remove its text content and vector embeddings from PostgreSQL."
+        itemName={docToDelete?.name}
+        onConfirm={() => {
+          if (docToDelete) {
+            handleDeleteDocument(docToDelete.id);
+            setDocToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }
