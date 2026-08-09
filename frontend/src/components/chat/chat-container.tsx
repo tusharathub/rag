@@ -101,7 +101,7 @@ export function ChatContainer() {
       {/* Sessions sub-sidebar */}
       <div className="w-64 border-r border-slate-900 bg-[#080808] flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-slate-900 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-[#FFA028]">// SESSIONS</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[#FFA028]">SESSIONS</span>
           <button
             onClick={() => dispatch(addChatSession({ id: crypto.randomUUID() }))}
             className="p-1 rounded bg-[#FFA028] hover:bg-[#E58D1B] text-slate-950 font-bold transition-all shadow"
@@ -222,7 +222,7 @@ export function ChatContainer() {
             <div className="h-14 w-14 rounded-lg bg-[#FFA028] flex items-center justify-center shadow-xl mb-4 text-slate-950 font-bold">
               <Cpu className="h-7 w-7" />
             </div>
-            <h3 className="text-2xl font-extrabold tracking-tight text-white mb-2">RAG Engine Copilot</h3>
+            <h3 className="text-2xl font-extrabold tracking-tight text-white mb-2">Docs Orbit Copilot</h3>
             <p className="text-xs text-slate-400 max-w-md leading-relaxed mb-6 font-sans">
               Select or create a conversation session to query documents with pgvector 1536d cosine similarity and Cohere v3 reranking.
             </p>

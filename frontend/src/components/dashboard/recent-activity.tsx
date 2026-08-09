@@ -74,7 +74,7 @@ export function RecentActivity() {
       <div>
         <CardHeader className="p-6 border-b border-slate-900 flex items-center justify-between">
           <CardTitle className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span className="text-[#FFA028]">//</span> RECENT ACTIVITY
+            <span className="text-[#FFA028]">RECENT</span> ACTIVITY
           </CardTitle>
           <span className="text-[10px] text-slate-500 font-mono">
             TOTAL: {allActivities.length}

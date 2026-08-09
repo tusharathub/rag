@@ -58,7 +58,7 @@ export function Stats() {
             className="overflow-hidden relative group hover:border-[#FFA028]/60 duration-300 bg-[#0C0C0C] border-slate-900 transition-all shadow-lg p-6 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-400 tracking-wider">// {item.title}</span>
+              <span className="text-[11px] font-bold text-slate-400 tracking-wider">{item.title}</span>
               <span className="text-[9px] font-bold text-[#FFA028] border border-[#FFA028]/40 px-2 py-0.5 bg-black tracking-widest">
                 {item.tag}
               </span>

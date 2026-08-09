@@ -76,7 +76,7 @@ export default function LandingPage() {
             </div>
             <div>
               <span className="font-mono text-xl font-black tracking-tighter text-black">
-                RAG<span className="text-black/60">//</span>ENGINE
+                DOCS<span className="text-black/60"> </span>ORBIT
               </span>
               <span className="block text-[9px] font-mono text-black/70 -mt-1 tracking-widest uppercase font-bold">
                 RETRIEVAL-AUGMENTED GENERATION
@@ -386,7 +386,7 @@ export default function LandingPage() {
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  RAG://LOCALHOST · VECTOR ENGINE ACTIVE
+                  DOCSORBIT://LOCALHOST · VECTOR ENGINE ACTIVE
                 </div>
                 <div className="h-2 w-2 rounded-full bg-[#FFA028]" />
               </div>
@@ -512,7 +512,7 @@ export default function LandingPage() {
       <footer className="bg-[#050505] py-12 px-6 border-t border-slate-900 font-mono text-xs text-slate-600">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <span className="font-bold text-white text-base">RAG ENGINE</span>
+            <span className="font-bold text-white text-base">DOCS ORBIT</span>
             <span>· VECTOR RETRIEVAL PLATFORM</span>
           </div>
 
@@ -525,7 +525,7 @@ export default function LandingPage() {
           </div>
 
           <div>
-            © 2026 RAG ENGINE. ALL RIGHTS RESERVED.
+            © 2026 DOCS ORBIT. ALL RIGHTS RESERVED.
           </div>
         </div>
       </footer>
@@ -543,7 +543,7 @@ export default function LandingPage() {
 
             <div className="space-y-2 font-mono">
               <div className="text-[#FFA028] text-xs font-bold tracking-widest uppercase">
-                // RAG ENGINE ACCESS
+                DOCS ORBIT ACCESS
               </div>
               <h3 className="text-2xl font-bold text-white font-sans">Get API Keys & Access</h3>
               <p className="text-xs text-slate-400 leading-relaxed font-sans">

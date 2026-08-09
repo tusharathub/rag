@@ -77,7 +77,7 @@ export default function WorkspaceLayout({
 
             <div className="hidden md:block">
               <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2 font-mono">
-                <span className="text-[#FFA028]">//</span> {getHeaderTitle()}
+                <span className="text-[#FFA028]">-</span> {getHeaderTitle()}
               </h2>
               <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                 {getHeaderDesc()}

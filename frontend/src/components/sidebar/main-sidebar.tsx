@@ -49,7 +49,7 @@ export function MainSidebar() {
             </div>
             {!sidebarCollapsed && (
               <span className="font-bold text-base tracking-tight text-white truncate">
-                RAG<span className="text-[#FFA028]">//</span>ENGINE
+                DOCS<span className="text-[#FFA028]"> </span>ORBIT
               </span>
             )}
           </Link>
