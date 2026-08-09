@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Dict
 from uuid import UUID
 from datetime import datetime
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import select, update, and_, or_, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from pgvector.sqlalchemy import Vector
