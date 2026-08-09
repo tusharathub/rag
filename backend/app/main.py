@@ -20,11 +20,19 @@ async def lifespan(app: FastAPI):
     # Shutdown tasks: Clean up connections and workers
 
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.ratelimit import limiter
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
 )
+
+# Register Rate Limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
 if settings.BACKEND_CORS_ORIGINS:

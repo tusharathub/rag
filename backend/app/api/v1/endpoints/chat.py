@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.api.deps import get_current_user, get_db, get_chat_service
 from app.infrastructure.db.models import User
 from app.services.chat import ChatService
 from app.api.v1.endpoints.document import verify_collection_ownership
+from app.core.ratelimit import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,7 +34,9 @@ class ChatRequest(BaseModel):
     summary="Stream chat generation",
     description="Streams RAG-augmented generation answer tokens for a given prompt in real-time."
 )
+@limiter.limit("30/minute")
 async def stream_chat(
+    req: Request,
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
