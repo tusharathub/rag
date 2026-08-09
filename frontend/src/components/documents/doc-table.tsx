@@ -1,14 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Search, FileText, Trash2, ArrowUpDown, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, FileText, Trash2, ArrowUpDown, CheckCircle, Clock, AlertCircle, MessageSquare } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { fetchDocuments, deleteDocumentThunk } from "@/store/slices/documentSlice";
 import { removeDocumentFromCollections } from "@/store/slices/collectionSlice";
+import { addChatSession } from "@/store/slices/chatSlice";
 import { useAuth } from "@clerk/nextjs";
 
 export function DocTable() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { getToken } = useAuth();
   const documents = useAppSelector((state) => state.documents.items);
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
@@ -25,6 +28,13 @@ export function DocTable() {
     dispatch(deleteDocumentThunk({ documentId: id, token }));
     dispatch(removeDocumentFromCollections(id));
   };
+
+  const handleChatWithDocument = (docName: string) => {
+    const sessionId = `chat-${Date.now()}`;
+    dispatch(addChatSession({ id: sessionId, title: `Chat: ${docName}` }));
+    router.push("/workspace/chat");
+  };
+
   
   const [search, setSearch] = React.useState("");
   const [sortField, setSortField] = React.useState<"name" | "fileSize" | "createdAt">("createdAt");
@@ -189,8 +199,16 @@ export function DocTable() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
+                        onClick={() => handleChatWithDocument(doc.name)}
+                        className="text-[#FFA028] hover:bg-[#FFA028]/10 p-1.5 rounded transition-colors mr-2 inline-flex items-center gap-1 font-bold text-[11px]"
+                        title={`Chat with ${doc.name}`}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        <span>CHAT</span>
+                      </button>
+                      <button
                         onClick={() => handleDeleteDocument(doc.id)}
-                        className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded transition-colors"
+                        className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded transition-colors inline-flex items-center"
                         title="Delete file"
                       >
                         <Trash2 className="h-4 w-4" />

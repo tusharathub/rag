@@ -166,15 +166,26 @@ class DocumentRepository(IDocumentRepository):
         """Hybrid search combining Dense Vector similarity and Sparse Full-Text search fused via Reciprocal Rank Fusion (RRF)."""
         candidate_limit = limit * 3
 
+        # Subquery to resolve user_id of the target collection
+        user_id_subquery = (
+            select(Collection.user_id)
+            .where(Collection.id == organization_id)
+            .scalar_subquery()
+        )
+
         # 1. Dense Vector Search (cosine similarity)
         distance_expr = DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
         dense_stmt = (
             select(DocumentChunk, distance_expr)
             .options(joinedload(DocumentChunk.document))
             .join(Document, Document.id == DocumentChunk.document_id)
+            .join(Collection, Collection.id == Document.collection_id)
             .where(
                 and_(
-                    Document.collection_id == organization_id,
+                    or_(
+                        Document.collection_id == organization_id,
+                        Collection.user_id == user_id_subquery
+                    ),
                     Document.deleted_at.is_(None)
                 )
             )
@@ -197,9 +208,13 @@ class DocumentRepository(IDocumentRepository):
                 select(DocumentChunk, rank_expr.label("rank"))
                 .options(joinedload(DocumentChunk.document))
                 .join(Document, Document.id == DocumentChunk.document_id)
+                .join(Collection, Collection.id == Document.collection_id)
                 .where(
                     and_(
-                        Document.collection_id == organization_id,
+                        or_(
+                            Document.collection_id == organization_id,
+                            Collection.user_id == user_id_subquery
+                        ),
                         Document.deleted_at.is_(None),
                         ts_vector.op("@@")(ts_query)
                     )
@@ -212,7 +227,6 @@ class DocumentRepository(IDocumentRepository):
             sparse_rows = sparse_res.all()
 
         # 3. Reciprocal Rank Fusion (RRF)
-        # RRF Score = sum( 1 / (k + rank_i) ) across dense and sparse retrievals
         rrf_scores: Dict[UUID, float] = {}
         chunk_map: Dict[UUID, DocumentChunk] = {}
 
@@ -231,16 +245,19 @@ class DocumentRepository(IDocumentRepository):
         # Sort candidate chunks by combined RRF score
         sorted_chunk_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)[:limit]
 
-        # If no results matched via strict vector/sparse search (e.g., general overview questions),
-        # fallback to fetching top chunks (chunk_index == 0) of active documents in the collection
+        # 4. Fallback if vector/sparse search yielded no results (e.g. overview questions like "tell me about this doc")
         if not sorted_chunk_ids:
             fallback_stmt = (
                 select(DocumentChunk)
                 .options(joinedload(DocumentChunk.document))
                 .join(Document, Document.id == DocumentChunk.document_id)
+                .join(Collection, Collection.id == Document.collection_id)
                 .where(
                     and_(
-                        Document.collection_id == organization_id,
+                        or_(
+                            Document.collection_id == organization_id,
+                            Collection.user_id == user_id_subquery
+                        ),
                         Document.deleted_at.is_(None)
                     )
                 )
