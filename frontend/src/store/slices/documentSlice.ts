@@ -1,7 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import { Document } from "@/types";
+import { getApiBaseUrl } from "@/lib/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = getApiBaseUrl();
 
 export interface DocumentState {
   items: Document[];

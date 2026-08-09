@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Progress } from "@/components/ui/progress";
 import { Document } from "@/types";
 import { useAuth } from "@clerk/nextjs";
+import { getApiBaseUrl } from "@/lib/api";
 
 interface UploadingFile {
   name: string;
@@ -37,7 +38,7 @@ export function UploadModal() {
     }
   };
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const API_BASE = getApiBaseUrl();
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   const { getToken } = useAuth();

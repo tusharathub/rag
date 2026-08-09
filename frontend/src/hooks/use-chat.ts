@@ -3,6 +3,7 @@ import { useAppSelector, useAppDispatch } from "@/store";
 import { addChatMessage, addChatSession, updateChatMessageText } from "@/store/slices/chatSlice";
 import { ChatMessage, ChatMessageSource } from "@/types";
 import { useAuth } from "@clerk/nextjs";
+import { getApiBaseUrl } from "@/lib/api";
 
 const mockAnswers = [
   {
@@ -67,7 +68,7 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const dispatch = useAppDispatch();
   const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const API_BASE = getApiBaseUrl();
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   const { getToken } = useAuth();
