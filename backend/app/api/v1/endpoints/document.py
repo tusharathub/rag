@@ -37,7 +37,7 @@ async def verify_collection_ownership(
     user_id: UUID, 
     db: AsyncSession
 ) -> Collection:
-    """Verifies that the collection exists and is owned by the user."""
+    """Verifies that the collection exists and is owned by the user. Auto-creates collection if missing."""
     stmt = select(Collection).where(
         Collection.id == collection_id,
         Collection.user_id == user_id,
@@ -46,22 +46,40 @@ async def verify_collection_ownership(
     result = await db.execute(stmt)
     collection = result.scalars().first()
     if not collection:
-        if settings.ENVIRONMENT == "development":
-            # Auto-create collection for dev ease
-            collection = Collection(
-                id=collection_id,
-                name="Default Dev Collection",
-                user_id=user_id
-            )
+        # Check if collection exists under another user
+        existing_stmt = select(Collection).where(Collection.id == collection_id)
+        existing_res = await db.execute(existing_stmt)
+        existing_coll = existing_res.scalars().first()
+
+        # If it doesn't exist or is owned by another user/deleted, auto-provision default workspace collection
+        target_id = collection_id if not existing_coll else uuid.uuid4()
+        collection = Collection(
+            id=target_id,
+            name="Default Workspace Collection",
+            user_id=user_id
+        )
+        try:
             db.add(collection)
             await db.commit()
             await db.refresh(collection)
             return collection
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Collection not found or access denied."
-        )
+        except Exception:
+            await db.rollback()
+            # If race condition, re-fetch user collection
+            user_coll_stmt = select(Collection).where(
+                Collection.user_id == user_id,
+                Collection.deleted_at.is_(None)
+            )
+            res = await db.execute(user_coll_stmt)
+            user_coll = res.scalars().first()
+            if user_coll:
+                return user_coll
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collection not found or access denied."
+            )
     return collection
+
 
 
 @router.post(
