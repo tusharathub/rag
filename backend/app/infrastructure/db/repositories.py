@@ -155,48 +155,28 @@ class DocumentRepository(IDocumentRepository):
         items = result.scalars().all()
         return {item.key: item.value for item in items}
 
-    async def hybrid_search(
+    async def _execute_hybrid_query(
         self, 
-        organization_id: UUID, 
+        collection_filter, 
         query_embedding: List[float], 
         query_text: str, 
-        limit: int = 5,
+        limit: int, 
         rrf_k: int = 60
     ) -> List[tuple[DocumentChunkDomain, float]]:
-        """Hybrid search combining Dense Vector similarity and Sparse Full-Text search fused via Reciprocal Rank Fusion (RRF)."""
         candidate_limit = limit * 3
-
-        # Subquery to resolve user_id of the target collection
-        user_id_subquery = (
-            select(Collection.user_id)
-            .where(Collection.id == organization_id)
-            .scalar_subquery()
-        )
-
-        # 1. Dense Vector Search (cosine similarity)
         distance_expr = DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
+
         dense_stmt = (
             select(DocumentChunk, distance_expr)
             .options(joinedload(DocumentChunk.document))
             .join(Document, Document.id == DocumentChunk.document_id)
-            .join(Collection, Collection.id == Document.collection_id)
-            .where(
-                and_(
-                    or_(
-                        Document.collection_id == organization_id,
-                        Collection.user_id == user_id_subquery
-                    ),
-                    Document.deleted_at.is_(None)
-                )
-            )
+            .where(and_(collection_filter, Document.deleted_at.is_(None)))
             .order_by(distance_expr)
             .limit(candidate_limit)
         )
-
         dense_res = await self.db.execute(dense_stmt)
         dense_rows = dense_res.all()
 
-        # 2. Sparse Text Search (PostgreSQL Full-Text Search websearch_to_tsquery)
         clean_query = query_text.strip()
         sparse_rows = []
         if clean_query:
@@ -208,59 +188,34 @@ class DocumentRepository(IDocumentRepository):
                 select(DocumentChunk, rank_expr.label("rank"))
                 .options(joinedload(DocumentChunk.document))
                 .join(Document, Document.id == DocumentChunk.document_id)
-                .join(Collection, Collection.id == Document.collection_id)
-                .where(
-                    and_(
-                        or_(
-                            Document.collection_id == organization_id,
-                            Collection.user_id == user_id_subquery
-                        ),
-                        Document.deleted_at.is_(None),
-                        ts_vector.op("@@")(ts_query)
-                    )
-                )
+                .where(and_(collection_filter, Document.deleted_at.is_(None), ts_vector.op("@@")(ts_query)))
                 .order_by(rank_expr.desc())
                 .limit(candidate_limit)
             )
-
             sparse_res = await self.db.execute(sparse_stmt)
             sparse_rows = sparse_res.all()
 
-        # 3. Reciprocal Rank Fusion (RRF)
         rrf_scores: Dict[UUID, float] = {}
         chunk_map: Dict[UUID, DocumentChunk] = {}
 
-        # Process dense ranks
         for rank, (db_chunk, _) in enumerate(dense_rows, start=1):
-            chunk_id = db_chunk.id
-            chunk_map[chunk_id] = db_chunk
-            rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank))
+            cid = db_chunk.id
+            chunk_map[cid] = db_chunk
+            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + (1.0 / (rrf_k + rank))
 
-        # Process sparse ranks
         for rank, (db_chunk, _) in enumerate(sparse_rows, start=1):
-            chunk_id = db_chunk.id
-            chunk_map[chunk_id] = db_chunk
-            rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank))
+            cid = db_chunk.id
+            chunk_map[cid] = db_chunk
+            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + (1.0 / (rrf_k + rank))
 
-        # Sort candidate chunks by combined RRF score
-        sorted_chunk_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)[:limit]
+        sorted_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)[:limit]
 
-        # 4. Fallback if vector/sparse search yielded no results (e.g. overview questions like "tell me about this doc")
-        if not sorted_chunk_ids:
+        if not sorted_ids:
             fallback_stmt = (
                 select(DocumentChunk)
                 .options(joinedload(DocumentChunk.document))
                 .join(Document, Document.id == DocumentChunk.document_id)
-                .join(Collection, Collection.id == Document.collection_id)
-                .where(
-                    and_(
-                        or_(
-                            Document.collection_id == organization_id,
-                            Collection.user_id == user_id_subquery
-                        ),
-                        Document.deleted_at.is_(None)
-                    )
-                )
+                .where(and_(collection_filter, Document.deleted_at.is_(None)))
                 .order_by(DocumentChunk.chunk_index.asc())
                 .limit(limit)
             )
@@ -269,14 +224,13 @@ class DocumentRepository(IDocumentRepository):
             for db_chunk in fallback_chunks:
                 chunk_map[db_chunk.id] = db_chunk
                 rrf_scores[db_chunk.id] = 0.5
-            sorted_chunk_ids = [c.id for c in fallback_chunks]
+            sorted_ids = [c.id for c in fallback_chunks]
 
         results = []
-        for cid in sorted_chunk_ids:
+        for cid in sorted_ids:
             db_chunk = chunk_map[cid]
             score = rrf_scores[cid]
             
-            # Ensure original_filename is set in metadata using Document.name if available
             meta = dict(db_chunk.chunk_metadata) if db_chunk.chunk_metadata else {}
             if "original_filename" not in meta and hasattr(db_chunk, "document") and db_chunk.document:
                 meta["original_filename"] = db_chunk.document.name
@@ -284,7 +238,7 @@ class DocumentRepository(IDocumentRepository):
             domain_chunk = DocumentChunkDomain(
                 id=db_chunk.id,
                 document_id=db_chunk.document_id,
-                collection_id=organization_id,
+                collection_id=db_chunk.document.collection_id if hasattr(db_chunk, "document") and db_chunk.document else UUID("00000000-0000-0000-0000-000000000001"),
                 content=db_chunk.content,
                 chunk_index=db_chunk.chunk_index,
                 page_number=db_chunk.page_number,
@@ -294,6 +248,37 @@ class DocumentRepository(IDocumentRepository):
             results.append((domain_chunk, score))
 
         return results
+
+    async def hybrid_search(
+        self, 
+        organization_id: UUID, 
+        query_embedding: List[float], 
+        query_text: str, 
+        limit: int = 5,
+        rrf_k: int = 60
+    ) -> List[tuple[DocumentChunkDomain, float]]:
+        """Hybrid search combining Dense Vector similarity and Sparse Full-Text search fused via Reciprocal Rank Fusion (RRF)."""
+        # Try searching within the specific collection first
+        results = await self._execute_hybrid_query(
+            Document.collection_id == organization_id,
+            query_embedding,
+            query_text,
+            limit,
+            rrf_k
+        )
+        
+        # If 0 results were found for the specific collection, fall back to searching active documents
+        if not results:
+            results = await self._execute_hybrid_query(
+                True,
+                query_embedding,
+                query_text,
+                limit,
+                rrf_k
+            )
+
+        return results
+
 
 
 class ChatRepository(IChatRepository):
