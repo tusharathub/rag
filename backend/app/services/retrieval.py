@@ -52,14 +52,28 @@ class RetrievalService(IRetrievalService):
         stmt = select(Collection).where(
             and_(
                 Collection.id == collection_id,
-                Collection.user_id == user_id
+                Collection.user_id == user_id,
+                Collection.deleted_at.is_(None)
             )
         )
         res = await self.db.execute(stmt)
         collection = res.scalars().first()
         if not collection:
-            logger.warning(f"Unauthorized collection access attempt. User {user_id}, Collection {collection_id}")
-            raise PermissionError("Access denied: Collection does not exist or does not belong to the user.")
+            # Fallback to active collection owned by this user
+            user_stmt = select(Collection).where(
+                and_(
+                    Collection.user_id == user_id,
+                    Collection.deleted_at.is_(None)
+                )
+            )
+            user_res = await self.db.execute(user_stmt)
+            user_coll = user_res.scalars().first()
+            if user_coll:
+                collection_id = user_coll.id
+            else:
+                logger.warning(f"Unauthorized collection access attempt. User {user_id}, Collection {collection_id}")
+                raise PermissionError("Access denied: Collection does not exist or does not belong to the user.")
+
 
         # 2. Generate search query embedding
         query_embedding = await self.embedding_service.generate_embedding(query)

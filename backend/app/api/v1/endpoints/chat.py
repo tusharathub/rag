@@ -38,8 +38,8 @@ async def stream_chat(
     db: AsyncSession = Depends(get_db),
     chat_service: ChatService = Depends(get_chat_service)
 ):
-    # Verify collection accessibility (creates collection automatically if it does not exist in dev)
-    await verify_collection_ownership(request.collection_id, current_user.id, db)
+    # Verify collection accessibility (returns user's authorized collection)
+    collection = await verify_collection_ownership(request.collection_id, current_user.id, db)
 
     # Convert session_id to UUID if provided as string
     session_id = request.session_id
@@ -54,7 +54,7 @@ async def stream_chat(
             stream = chat_service.stream_chat(
                 session_id=session_id,
                 user_id=current_user.id,
-                organization_id=request.collection_id,
+                organization_id=collection.id,
                 message_content=request.message,
                 limit=request.limit,
                 use_mmr=request.use_mmr,
