@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plus, MessageSquare, Trash2, Bot, FileText, CheckCircle2, Cpu } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/store";
-import { setActiveChatSessionId, addChatSession, deleteChatSession, updateChatSessionScope } from "@/store/slices/chatSlice";
+import { setActiveChatSessionId, addChatSession, deleteChatSession, updateChatSessionScope, hydrateChatState } from "@/store/slices/chatSlice";
 import { fetchDocuments } from "@/store/slices/documentSlice";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
@@ -18,6 +18,7 @@ export function ChatContainer() {
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
   React.useEffect(() => {
+    dispatch(hydrateChatState());
     dispatch(fetchDocuments({ collectionId: DEFAULT_COLLECTION_ID }));
   }, [dispatch]);
 

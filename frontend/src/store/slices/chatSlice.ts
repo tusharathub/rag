@@ -7,16 +7,36 @@ export interface ChatState {
   messages: Record<string, ChatMessage[]>;
 }
 
-const initialState: ChatState = {
-  sessions: [],
-  activeSessionId: null,
-  messages: {},
+const loadInitialState = (): ChatState => {
+  if (typeof window === "undefined") {
+    return { sessions: [], activeSessionId: null, messages: {} };
+  }
+  try {
+    const serialized = localStorage.getItem("rag_chat_state");
+    if (!serialized) return { sessions: [], activeSessionId: null, messages: {} };
+    const parsed = JSON.parse(serialized);
+    return {
+      sessions: parsed.sessions || [],
+      activeSessionId: parsed.activeSessionId || (parsed.sessions?.length > 0 ? parsed.sessions[0].id : null),
+      messages: parsed.messages || {},
+    };
+  } catch (e) {
+    return { sessions: [], activeSessionId: null, messages: {} };
+  }
 };
+
+const initialState: ChatState = loadInitialState();
 
 export const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
+    hydrateChatState: (state) => {
+      const loaded = loadInitialState();
+      state.sessions = loaded.sessions;
+      state.activeSessionId = loaded.activeSessionId;
+      state.messages = loaded.messages;
+    },
     setActiveChatSessionId: (state, action: PayloadAction<string | null>) => {
       state.activeSessionId = action.payload;
     },
@@ -99,6 +119,7 @@ export const chatSlice = createSlice({
 });
 
 export const {
+  hydrateChatState,
   setActiveChatSessionId,
   addChatSession,
   updateChatSessionScope,

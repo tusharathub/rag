@@ -14,6 +14,17 @@ export const store = configureStore({
   },
 });
 
+store.subscribe(() => {
+  if (typeof window !== "undefined") {
+    try {
+      const chatState = store.getState().chat;
+      localStorage.setItem("rag_chat_state", JSON.stringify(chatState));
+    } catch (e) {
+      // Ignore quota/security errors
+    }
+  }
+});
+
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
