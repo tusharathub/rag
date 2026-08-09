@@ -254,10 +254,20 @@ class DocumentRepository(IDocumentRepository):
         organization_id: UUID, 
         query_embedding: List[float], 
         query_text: str, 
+        document_id: Optional[UUID] = None,
         limit: int = 5,
         rrf_k: int = 60
     ) -> List[tuple[DocumentChunkDomain, float]]:
         """Hybrid search combining Dense Vector similarity and Sparse Full-Text search fused via Reciprocal Rank Fusion (RRF)."""
+        if document_id:
+            return await self._execute_hybrid_query(
+                Document.id == document_id,
+                query_embedding,
+                query_text,
+                limit,
+                rrf_k
+            )
+
         # Try searching within the specific collection first
         results = await self._execute_hybrid_query(
             Document.collection_id == organization_id,

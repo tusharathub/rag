@@ -43,6 +43,7 @@ class RetrievalService(IRetrievalService):
         query: str, 
         collection_id: UUID, 
         user_id: UUID, 
+        document_id: Optional[UUID] = None,
         limit: int = 5,
         use_mmr: bool = False,
         lambda_val: float = 0.5
@@ -84,6 +85,7 @@ class RetrievalService(IRetrievalService):
             organization_id=collection_id,
             query_embedding=query_embedding,
             query_text=query,
+            document_id=document_id,
             limit=retrieval_limit
         )
 

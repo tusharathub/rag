@@ -20,6 +20,7 @@ from typing import Optional, Union
 class ChatRequest(BaseModel):
     session_id: Union[UUID, str]
     collection_id: UUID
+    document_id: Optional[UUID] = None
     message: str
     limit: Optional[int] = 5
     use_mmr: Optional[bool] = False
@@ -56,6 +57,7 @@ async def stream_chat(
                 user_id=current_user.id,
                 organization_id=collection.id,
                 message_content=request.message,
+                document_id=request.document_id,
                 limit=request.limit,
                 use_mmr=request.use_mmr,
                 lambda_val=request.lambda_val

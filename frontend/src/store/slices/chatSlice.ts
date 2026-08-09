@@ -20,19 +20,46 @@ export const chatSlice = createSlice({
     setActiveChatSessionId: (state, action: PayloadAction<string | null>) => {
       state.activeSessionId = action.payload;
     },
-    addChatSession: (state, action: PayloadAction<{ id: string; title?: string }>) => {
-      const { id, title = "New Conversation" } = action.payload;
+    addChatSession: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        title?: string;
+        selectedDocumentId?: string;
+        selectedCollectionId?: string;
+      }>
+    ) => {
+      const { id, title = "New Conversation", selectedDocumentId, selectedCollectionId } = action.payload;
       const newSession: ChatSession = {
         id,
         title,
         userId: "user-1",
         organizationId: "org-1",
+        selectedDocumentId,
+        selectedCollectionId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       state.sessions.unshift(newSession);
       state.messages[id] = [];
       state.activeSessionId = id;
+    },
+    updateChatSessionScope: (
+      state,
+      action: PayloadAction<{
+        sessionId: string;
+        selectedDocumentId?: string;
+        selectedCollectionId?: string;
+        title?: string;
+      }>
+    ) => {
+      const { sessionId, selectedDocumentId, selectedCollectionId, title } = action.payload;
+      const session = state.sessions.find((s) => s.id === sessionId);
+      if (session) {
+        session.selectedDocumentId = selectedDocumentId;
+        session.selectedCollectionId = selectedCollectionId;
+        if (title) session.title = title;
+      }
     },
     deleteChatSession: (state, action: PayloadAction<string>) => {
       const id = action.payload;
@@ -74,6 +101,7 @@ export const chatSlice = createSlice({
 export const {
   setActiveChatSessionId,
   addChatSession,
+  updateChatSessionScope,
   deleteChatSession,
   addChatMessage,
   updateChatMessageText,

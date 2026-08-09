@@ -67,7 +67,9 @@ const fallbackAnswer = {
 export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const dispatch = useAppDispatch();
+  const chatSessions = useAppSelector((state) => state.chat.sessions);
   const activeChatSessionId = useAppSelector((state) => state.chat.activeSessionId);
+  const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
   const API_BASE = getApiBaseUrl();
   const DEFAULT_COLLECTION_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -123,7 +125,8 @@ export function useChat() {
         headers,
         body: JSON.stringify({
           session_id: sessionId,
-          collection_id: DEFAULT_COLLECTION_ID,
+          collection_id: activeSession?.selectedCollectionId || DEFAULT_COLLECTION_ID,
+          document_id: activeSession?.selectedDocumentId || undefined,
           message: content,
         }),
       });

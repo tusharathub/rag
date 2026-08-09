@@ -44,6 +44,8 @@ export interface ChatSession {
   title: string;
   userId: string;
   organizationId: string;
+  selectedDocumentId?: string;
+  selectedCollectionId?: string;
   createdAt: string;
   updatedAt: string;
 }

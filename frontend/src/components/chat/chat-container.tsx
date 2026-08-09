@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plus, MessageSquare, Trash2, Bot, FileText, CheckCircle2, Cpu } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/store";
-import { setActiveChatSessionId, addChatSession, deleteChatSession } from "@/store/slices/chatSlice";
+import { setActiveChatSessionId, addChatSession, deleteChatSession, updateChatSessionScope } from "@/store/slices/chatSlice";
 import { fetchDocuments } from "@/store/slices/documentSlice";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
@@ -21,8 +21,75 @@ export function ChatContainer() {
     dispatch(fetchDocuments({ collectionId: DEFAULT_COLLECTION_ID }));
   }, [dispatch]);
 
+  const collections = useAppSelector((state) => state.collections.items);
+
   const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
   const completedDocs = documents.filter((d) => d.status === "COMPLETED" || !d.status);
+
+  // Compute current scope selection value for the active session
+  const getScopeValue = () => {
+    if (!activeSession) return "";
+    if (activeSession.selectedDocumentId) return `doc:${activeSession.selectedDocumentId}`;
+    if (activeSession.selectedCollectionId) return `col:${activeSession.selectedCollectionId}`;
+    if (activeSession.title.startsWith("Chat: ")) {
+      const targetName = activeSession.title.replace("Chat: ", "").trim();
+      const matchedDoc = documents.find((d) => d.name === targetName);
+      if (matchedDoc) return `doc:${matchedDoc.id}`;
+      const matchedCol = collections.find((c) => c.name === targetName);
+      if (matchedCol) return `col:${matchedCol.id}`;
+    }
+    // If explicitly titled or configured for all
+    if (activeSession.title === "All Documents") return "all";
+    return "";
+  };
+
+  const currentScope = getScopeValue();
+  const isLocked = !currentScope || currentScope === "";
+
+  const handleScopeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!activeSession) return;
+    const val = e.target.value;
+    if (!val) {
+      dispatch(
+        updateChatSessionScope({
+          sessionId: activeSession.id,
+          selectedDocumentId: undefined,
+          selectedCollectionId: undefined,
+        })
+      );
+    } else if (val === "all") {
+      dispatch(
+        updateChatSessionScope({
+          sessionId: activeSession.id,
+          selectedDocumentId: undefined,
+          selectedCollectionId: undefined,
+          title: "All Documents",
+        })
+      );
+    } else if (val.startsWith("doc:")) {
+      const docId = val.replace("doc:", "");
+      const targetDoc = documents.find((d) => d.id === docId);
+      dispatch(
+        updateChatSessionScope({
+          sessionId: activeSession.id,
+          selectedDocumentId: docId,
+          selectedCollectionId: undefined,
+          title: targetDoc ? `Chat: ${targetDoc.name}` : "Document Chat",
+        })
+      );
+    } else if (val.startsWith("col:")) {
+      const colId = val.replace("col:", "");
+      const targetCol = collections.find((c) => c.id === colId);
+      dispatch(
+        updateChatSessionScope({
+          sessionId: activeSession.id,
+          selectedDocumentId: undefined,
+          selectedCollectionId: colId,
+          title: targetCol ? `Chat: ${targetCol.name}` : "Collection Chat",
+        })
+      );
+    }
+  };
 
   return (
     <div className="flex h-full rounded-xl overflow-hidden border border-slate-900 bg-[#0C0C0C] shadow-2xl font-mono">
@@ -99,16 +166,38 @@ export function ChatContainer() {
                 </div>
               </div>
 
-              {/* Connected Active Documents Indicator */}
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded bg-black border border-slate-800 text-[11px]">
-                  <FileText className="h-3.5 w-3.5 text-[#FFA028]" />
-                  <span className="font-bold text-white">CONTEXT:</span>
-                  <span className="text-slate-400">
-                    {completedDocs.length > 0
-                      ? `${completedDocs.length} ${completedDocs.length === 1 ? 'file' : 'files'}`
-                      : "0 files"}
+              {/* Context Scope Picker Dropdown */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-[#FFA028] uppercase tracking-wider hidden md:inline">
+                    SCOPE:
                   </span>
+                  <select
+                    value={currentScope}
+                    onChange={handleScopeChange}
+                    className="px-3 py-1.5 bg-black border border-[#FFA028]/60 text-white rounded text-xs focus:outline-none focus:border-[#FFA028] font-mono cursor-pointer"
+                  >
+                    <option value="">-- SELECT DOCUMENT / SCOPE --</option>
+                    <option value="all">🌐 All Ingested Files ({completedDocs.length})</option>
+                    {documents.length > 0 && (
+                      <optgroup label="DOCUMENTS">
+                        {documents.map((doc) => (
+                          <option key={doc.id} value={`doc:${doc.id}`}>
+                            📄 {doc.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {collections.length > 0 && (
+                      <optgroup label="COLLECTIONS">
+                        {collections.map((col) => (
+                          <option key={col.id} value={`col:${col.id}`}>
+                            📁 {col.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
                 </div>
               </div>
             </div>
@@ -120,7 +209,7 @@ export function ChatContainer() {
 
             {/* Input Form */}
             <div className="p-4 border-t border-slate-900 bg-[#080808]">
-              <ChatInput />
+              <ChatInput isLocked={isLocked} />
             </div>
           </>
         ) : (

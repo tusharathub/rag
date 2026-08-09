@@ -77,6 +77,7 @@ class ChatService:
         user_id: uuid.UUID,
         organization_id: uuid.UUID, # acts as collection_id
         message_content: str,
+        document_id: Optional[uuid.UUID] = None,
         limit: int = 5,
         use_mmr: bool = False,
         lambda_val: float = 0.5
@@ -101,6 +102,7 @@ class ChatService:
             query=message_content,
             collection_id=organization_id,
             user_id=user_id,
+            document_id=document_id,
             limit=limit,
             use_mmr=use_mmr,
             lambda_val=lambda_val
