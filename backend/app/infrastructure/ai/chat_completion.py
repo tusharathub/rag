@@ -37,12 +37,29 @@ class BaseOpenAICompatibleProvider(IChatCompletionService):
         user_message: str
     ) -> str:
         messages = self._assemble_messages(system_prompt, history, user_message)
-        response = await self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,  # type: ignore
-            temperature=0.2,
-        )
-        return response.choices[0].message.content or ""
+        candidate_models = list(dict.fromkeys([
+            self.model_name,
+            "meta-llama/llama-3.1-8b-instruct:free",
+            "google/gemma-2-9b-it:free",
+            "qwen/qwen-2.5-7b-instruct:free",
+            "mistralai/mistral-7b-instruct:free"
+        ]))
+        
+        last_error = None
+        for model in candidate_models:
+            try:
+                response = await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,  # type: ignore
+                    temperature=0.2,
+                )
+                return response.choices[0].message.content or ""
+            except Exception as e:
+                logger.warning(f"generate_response failed with model '{model}': {e}. Trying fallback...")
+                last_error = e
+        if last_error:
+            raise last_error
+        return ""
 
     async def stream_response(
         self, 
@@ -51,17 +68,41 @@ class BaseOpenAICompatibleProvider(IChatCompletionService):
         user_message: str
     ) -> AsyncGenerator[str, None]:
         messages = self._assemble_messages(system_prompt, history, user_message)
-        response_stream = await self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,  # type: ignore
-            temperature=0.2,
-            stream=True,
-        )
+        candidate_models = list(dict.fromkeys([
+            self.model_name,
+            "meta-llama/llama-3.1-8b-instruct:free",
+            "google/gemma-2-9b-it:free",
+            "qwen/qwen-2.5-7b-instruct:free",
+            "mistralai/mistral-7b-instruct:free"
+        ]))
         
-        async for chunk in response_stream:
-            content = chunk.choices[0].delta.content
-            if content:
-                yield content
+        last_error = None
+        for model in candidate_models:
+            try:
+                logger.info(f"Attempting stream completion with model: {model}")
+                response_stream = await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,  # type: ignore
+                    temperature=0.2,
+                    stream=True,
+                )
+                
+                has_yielded = False
+                async for chunk in response_stream:
+                    if chunk.choices and len(chunk.choices) > 0:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            has_yielded = True
+                            yield content
+                if has_yielded:
+                    return
+            except Exception as e:
+                logger.warning(f"stream_response failed with model '{model}': {e}. Trying fallback...")
+                last_error = e
+                
+        if last_error:
+            raise last_error
+
 
 
 class OpenAIChatCompletionService(BaseOpenAICompatibleProvider):

@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     # RAG settings
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIMENSION: int = 1536  # Matches text-embedding-3-small
-    LLM_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    LLM_MODEL: str = "meta-llama/llama-3.1-8b-instruct:free"
     RERANK_MODEL: str = "rerank-english-v3.0"
 
 
