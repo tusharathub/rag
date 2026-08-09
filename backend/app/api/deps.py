@@ -56,7 +56,7 @@ async def get_current_user(
     token: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """FastAPI dependency to extract and verify Clerk JWT. In development, defaults to a mock user."""
+    """FastAPI dependency to extract and verify Clerk JWT. Auto-provisions verified users in Postgres if missing."""
     clerk_user_id = None
     email = "developer@example.com"
     first_name = "Dev"
@@ -66,15 +66,15 @@ async def get_current_user(
         try:
             payload = verify_clerk_token(token.credentials)
             clerk_user_id = payload.get("sub")
-            email = payload.get("email", email)
+            email = payload.get("email") or payload.get("primary_email") or f"{clerk_user_id}@clerk.user"
         except TokenVerificationError as e:
+            logger.warning(f"Clerk token verification failed: {e}")
             if settings.ENVIRONMENT != "development":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=str(e),
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            logger.warning(f"Clerk verification failed in development: {e}. Falling back to dev user.")
 
     if not clerk_user_id:
         if settings.ENVIRONMENT == "development":
@@ -82,7 +82,7 @@ async def get_current_user(
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is missing identity field (sub)",
+                detail="Authentication required. Please sign in.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -92,26 +92,32 @@ async def get_current_user(
     user = result.scalars().first()
 
     if not user:
-        if settings.ENVIRONMENT == "development":
-            # Auto-create mock dev user in development
-            user = User(
-                id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
-                clerk_user_id=clerk_user_id,
-                email=email,
-                first_name=first_name,
-                last_name=last_name
-            )
+        # Auto-provision user record in Postgres upon first verified request
+        user_id = uuid.UUID("00000000-0000-0000-0000-000000000000") if clerk_user_id == "user_dev" else uuid.uuid4()
+        user = User(
+            id=user_id,
+            clerk_user_id=clerk_user_id,
+            email=email,
+            first_name=first_name,
+            last_name=last_name
+        )
+        try:
             db.add(user)
             await db.commit()
             await db.refresh(user)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User record is not synchronized or is deactivated",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        except Exception as e:
+            await db.rollback()
+            result = await db.execute(query)
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Could not provision user record: {str(e)}",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
     return user
+
 
 
 from app.infrastructure.ai.chat_completion import LLMProviderFactory
