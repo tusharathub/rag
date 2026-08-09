@@ -1,9 +1,12 @@
 import uuid
+import logging
 from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.core.security import verify_clerk_token, TokenVerificationError
